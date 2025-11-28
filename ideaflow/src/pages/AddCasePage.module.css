@@ -1,0 +1,444 @@
+/* AddCasePage.module.css */
+
+body {
+  background-color: #0E900E;
+  font-family: 'Malik Trial';
+  margin: 0;
+  padding: 0;
+}
+
+.header {
+  background-color: #0E900E;
+  padding: 10px 10%;
+  color: #F5F5F5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Бургер меню */
+.burgerMenu {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.burgerMenu span {
+  width: 25px;
+  height: 3px;
+  background-color: #F5F5F5;
+  margin: 3px 0;
+  transition: 0.3s;
+  border-radius: 2px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.navLinks a {
+  color: #F5F5F5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.buttonYellow {
+  font-family: 'Malik Trial';
+  color: #0E900E;
+  background-color: #FBBB13;
+  border: none;
+  border-radius: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Оверлей */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+}
+
+/* Мобильное меню из футера */
+.mobileFooterMenu {
+  display: none;
+}
+
+.innerContainer {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 30px 40px;
+  background-color: #f7f7f7;
+  border-radius: 15px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  color: #0E900E;
+}
+
+h2 {
+  text-align: center;
+  font-weight: 700;
+  font-size: 26px;
+  margin-bottom: 30px;
+}
+
+form label {
+  display: block;
+  margin-bottom: 30px;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+label p {
+  margin-bottom: 10px;
+}
+
+p {
+  font-family: 'Geoform';
+}
+
+/* Классы для текстового инпута и текстовой области*/
+.textInput {
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 16px;
+  color: #0E900E;
+  border: 1px solid #0E900E;
+  border-radius: 12px;
+  box-sizing: border-box;
+  outline: none;
+  font-family: 'Geoform';
+}
+
+.textareaInput {
+  width: 100%;
+  height: 140px;
+  padding: 12px 15px;
+  font-size: 16px;
+  color: #0E900E;
+  border: 1px solid #0E900E;
+  border-radius: 12px;
+  box-sizing: border-box;
+  outline: none;
+  resize: vertical;
+  font-family: 'Geoform';
+}
+
+.fileInputHidden {
+  display: none;
+}
+
+/* Контейнер для кнопок файлов */
+.fileButtonsContainer {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+/* Класс для кнопок "Прикрепить файл" и "Выбрать обложку" */
+.labelFileButton {
+  display: inline-block;
+  background-color: #0E900E;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 12px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s ease;
+  color: #FBBB13;
+  font-family: 'Geoform';
+  text-align: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.labelFileButton:hover {
+  background-color: #1f531f;
+}
+
+.fileInfo {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #e8f5e8;
+  border-radius: 8px;
+  border-left: 4px solid #0E900E;
+}
+
+.fileList {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+}
+
+.fileListItem {
+  width: 60px;
+  height: 60px;
+  background-color: #F5F5F5;
+  border-radius: 10px;
+  text-align: center;
+  padding: 5px;
+  font-size: 12px;
+  color: #444;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.submitButton {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  background-color: #0E900E;
+  color: #FBBB13;
+  border: none;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-family: 'Malik Trial';
+  margin-top: 30px;
+}
+
+.submitButton:hover {
+  background-color: #1f531f;
+}
+
+.footer {
+  background-color: #0E900E;
+  color: #F5F5F5;
+  padding: 20px;
+  margin-top: 40px;
+}
+
+.footerContainer {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footerLogo {
+  display: flex;
+}
+
+.footerLogo span {
+  color: #FBBB13;
+}
+
+.footerLogo img {
+  width: clamp(80px, 18vw, 220px);
+  height: auto;
+  max-width: 100%;
+}
+
+.footerContacts {
+  font-size: 20px;
+}
+
+.footerContacts p {
+  font-family: 'Geoform';
+}
+
+.footerContacts a {
+  color: #D9D9D9;
+  text-decoration: underline;
+}
+
+.footerSocials {
+  font-size: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+
+.footerSocials img {
+  width: 30px;
+}
+
+/* Мобильные стили */
+@media (max-width: 768px) {
+  .header {
+    padding: 30px 20px 10px 20px;
+  }
+
+  .burgerMenu {
+    display: flex;
+  }
+
+  .navLinks {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 80%;
+    max-width: 300px;
+    height: 100vh;
+    background-color: #0E900E;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 80px 30px 30px;
+    gap: 25px;
+    transition: right 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  .navLinksActive {
+    right: 0;
+  }
+
+  .overlay {
+    display: block;
+  }
+
+  .mobileFooterMenu {
+    display: block;
+    margin-top: 30px;
+    width: 100%;
+    border-top: 1px solid #F5F5F5;
+    padding-top: 20px;
+  }
+
+  .innerContainer {
+    margin: 20px;
+    padding: 20px;
+  }
+
+  h2 {
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+
+  .fileButtonsContainer {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .labelFileButton {
+    min-width: auto;
+    width: 80%;
+    font-size: 16px;
+    padding: 10px 15px;
+    margin: 0 auto;
+  }
+
+  .footerContainer {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .footerLogo img {
+    width: clamp(70px, 22vw, 120px);
+  }
+}
+
+@media (max-width: 480px) {
+  .innerContainer {
+    margin: 15px;
+    padding: 15px;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  form label {
+    font-size: 16px;
+    margin-bottom: 20px;
+  }
+
+  .textInput,
+  .textareaInput {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .textareaInput {
+    height: 120px;
+  }
+
+  .submitButton {
+    font-size: 18px;
+    padding: 12px;
+  }
+
+  .footerContacts {
+    font-size: 16px;
+  }
+
+  .footerSocials img {
+    width: 25px;
+  }
+}
+
+
+.selectInput {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+.selectInput:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+    .selectInput {
+        padding: 12px;
+        font-size: 16px;
+    }
+}
+/* Очень маленькие экраны */
+@media (max-width: 360px) {
+  .innerContainer {
+    margin: 10px;
+    padding: 12px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  .labelFileButton {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .footerLogo img {
+    width: 240px;
+  }
+}

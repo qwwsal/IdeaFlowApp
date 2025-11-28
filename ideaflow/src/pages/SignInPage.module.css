@@ -1,0 +1,412 @@
+/* PageFullCase.module.css */
+body {
+  background-color: #0E900E;
+  margin: 0;
+  padding: 0;
+}
+
+.header {
+  background-color: #0E900E;
+  padding: 10px 10%;
+  color: #F5F5F5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Бургер меню */
+.burgerMenu {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.burgerMenu span {
+  width: 25px;
+  height: 3px;
+  background-color: #F5F5F5;
+  margin: 3px 0;
+  transition: 0.3s;
+  border-radius: 2px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.navLinks a {
+  color: #F5F5F5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.buttonYellow {
+  font-family: 'Malik Trial';
+  color: #0E900E;
+  background-color: #FBBB13;
+  border: none;
+  border-radius: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Оверлей */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+}
+
+/* Мобильное меню из футера */
+.mobileFooterMenu {
+  display: none;
+}
+
+.form {
+  background: #F5F5F5;
+  max-width: 400px;
+  margin: 40px auto;
+  padding: 40px 30px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  animation: fadeIn 0.6s ease-out;
+}
+
+.form h2 {
+  color: #0E900E;
+  margin-bottom: 30px;
+  font-size: 32px;
+  font-weight: bold;
+  font-family: 'Malik Trial', sans-serif;
+}
+
+.form input {
+  width: 100%;
+  padding: 15px 20px;
+  margin: 12px 0;
+  border: 2px solid #E0E0E0;
+  border-radius: 12px;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  background-color: #FFFFFF;
+  font-family: inherit;
+}
+
+.form input:focus {
+  outline: none;
+  border-color: #0E900E;
+  box-shadow: 0 0 0 3px rgba(14, 144, 14, 0.1);
+  transform: translateY(-2px);
+}
+
+.form input::placeholder {
+  color: #999;
+}
+
+.form button {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #0E900E, #0b7a0b);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.3s ease;
+  font-family: 'Malik Trial', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form button:hover {
+  background: linear-gradient(135deg, #0b7a0b, #096009);
+  box-shadow: 0 6px 20px rgba(14, 144, 14, 0.3);
+}
+
+
+.form button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Стили для ошибок */
+.form p[style*="color: red"] {
+  background-color: #ffe6e6;
+  border: 1px solid #ff4444;
+  border-radius: 8px;
+  padding: 12px 15px;
+  margin: 15px 0;
+  font-size: 14px;
+  color: #cc0000 !important;
+  animation: shake 0.5s ease-in-out;
+}
+
+.transition {
+  margin-top: 25px;
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #E0E0E0;
+}
+
+.switchLink {
+  color: #0E900E;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.switchLink:hover {
+  color: #FBBB13;
+  text-decoration: underline;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .form {
+    margin: 30px 20px;
+    padding: 30px 25px;
+    border-radius: 16px;
+  }
+  
+  .form h2 {
+    font-size: 28px;
+    margin-bottom: 25px;
+  }
+  
+  .form input {
+    padding: 14px 18px;
+    font-size: 15px;
+  }
+  
+  .form button {
+    padding: 14px;
+    font-size: 16px;
+  }
+  
+  .switchLink {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .form {
+    margin: 20px 15px;
+    padding: 25px 20px;
+  }
+  
+  .form h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .form input {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  
+  .form button {
+    padding: 12px;
+    font-size: 15px;
+  }
+  
+  .transition {
+    margin-top: 20px;
+    padding-top: 15px;
+  }
+}
+
+
+.footer {
+  background-color: #0E900E;
+  color: #F5F5F5;
+  padding: 20px;
+  margin-top: 40px;
+}
+
+.footerContainer {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footerLogo {
+  display: flex;
+}
+
+.footerLogo span {
+  color: #FBBB13;
+}
+
+.footerLogo img {
+  width: clamp(80px, 18vw, 220px);
+  height: auto;
+  max-width: 100%;
+}
+
+.footerContacts {
+  font-size: 20px;
+}
+
+.footerContacts p {
+  font-family: 'Geoform';
+}
+
+.footerContacts a {
+  color: #D9D9D9;
+  text-decoration: underline;
+}
+
+.footerSocials {
+  font-size: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+
+.footerSocials img {
+  width: 30px;
+}
+
+/* Мобильные стили */
+@media (max-width: 768px) {
+  .header {
+   padding: 30px 20px 10px 20px;
+  }
+
+  .burgerMenu {
+    display: flex;
+  }
+
+  .navLinks {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 80%;
+    max-width: 300px;
+    height: 100vh;
+    background-color: #0E900E;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 80px 30px 30px;
+    gap: 25px;
+    transition: right 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  .navLinksActive {
+    right: 0;
+  }
+
+  .overlay {
+    display: block;
+  }
+
+  .mobileFooterMenu {
+    display: block;
+    margin-top: 30px;
+    width: 100%;
+    border-top: 1px solid #F5F5F5;
+    padding-top: 20px;
+  }
+
+  .container {
+    padding: 20px 15px;
+    margin: 10px auto;
+  }
+  
+  .title {
+    font-size: 24px;
+  }
+
+  .infoSection {
+    padding: 20px;
+  }
+
+  .acceptButton {
+    padding: 12px 20px;
+    font-size: 16px;
+  }
+
+  .footerContainer {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .footerLogo img {
+    width: clamp(70px, 22vw, 120px);
+  }
+
+  .footerContacts {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 15px 10px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .infoSection {
+    padding: 15px;
+  }
+
+  .footerContacts {
+    font-size: 14px;
+  }
+
+  .footerSocials img {
+    width: 25px;
+  }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 360px) {
+  .container {
+    padding: 10px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+}

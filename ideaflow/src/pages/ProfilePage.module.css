@@ -1,0 +1,1131 @@
+/* ProfilePage.module.css */
+body {
+  background-color: #F5F5F5;
+  margin: 0;
+  padding: 0;
+}
+
+.header {
+  background-color: #0E900E;
+  padding: 10px 10%;
+  color: #F5F5F5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Бургер меню */
+.burgerMenu {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.burgerMenu span {
+  width: 25px;
+  height: 3px;
+  background-color: #F5F5F5;
+  margin: 3px 0;
+  transition: 0.3s;
+  border-radius: 2px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.navLinks a {
+  color: #F5F5F5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.buttonYellow {
+  font-family: 'Malik Trial';
+  color: #0E900E;
+  background-color: #FBBB13;
+  border: none;
+  border-radius: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Оверлей */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+}
+
+/* Мобильное меню из футера */
+.mobileFooterMenu {
+  display: none;
+}
+
+.centerWrapper {
+  background: #F5F5F5;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 70vh;
+  width: 100%;
+  border-radius: 20px 20px 0px 0px;
+  padding: 40px;
+  box-sizing: border-box;
+  gap: 40px;
+}
+
+.userInfo {
+  flex: 2;
+  background-color: #f5f5f5;
+  border-radius: 20px;
+  padding: 30px 40px 30px 40px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.photoWrapper {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid #0E900E;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f0f0;
+}
+
+.userPhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.userPhotoPlaceholder {
+  font-weight: bold;
+  color: #777;
+  font-size: 18px;
+  text-align: center;
+}
+
+.fileInput {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.infoDisplay p {
+  font-family: "Geoform";
+}
+
+.editButton {
+  margin-top: 20px;
+  background-color: #FBBB13;
+  color: #0E900E;
+  font-weight: 700;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.editButton:hover{
+  background-color: #e6a813;
+}
+
+h1{
+  font-weight: 700;
+  font-size: 26px;
+  margin: 16px 0px;
+}
+
+.editForm input,
+.editForm textarea {
+  width: 100%;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 16px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  font-family: 'Geoform';
+}
+
+.editForm textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.saveButton,
+.cancelButton {
+  margin-top: 20px;
+  padding: 10px 20px;
+  border-radius: 16px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.saveButton {
+  background-color: #0E900E;
+  color: #f5f5f5;
+  margin-right: 10px;
+}
+
+.cancelButton {
+  background-color: #ccc;
+  color: #555;
+}
+
+.actionButtons {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 30px 40px 30px 40px;
+  justify-content: flex-start;
+  font-size: 16px;
+}
+
+.actionButton1 {
+  background-color: #FBBB13;
+  color: #0E900E;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 14px 20px;
+  border-radius: 16px;
+  border: none;
+  transition: background-color 0.2s ease;
+  font-size: 16px;
+}
+
+.actionButton2 {
+  background-color:#0E900E ;
+  color: #FBBB13;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 14px 20px;
+  border-radius: 16px;
+  border: none;
+  transition: background-color 0.2s ease;
+  font-size: 16px;
+}
+
+.actionButton1:hover {
+  background-color: #e6a813;
+}
+
+.actionButton2:hover {
+  background-color: #0d7c0d;
+}
+
+.logoutButton {
+ background-color:#A24B00 ;
+  color: #FBBB13;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 14px 20px;
+  border-radius: 16px;
+  border: none;
+  transition: background-color 0.2s ease;
+  font-size: 16px;
+}
+
+.logoutButton:hover {
+  background-color: #801f1f;
+}
+
+.tabsContainer {
+  flex: 3;
+  background: #f5f5f5;
+  border-radius: 0px 0px 20px 20px;
+  padding: 20px;
+  box-sizing: border-box;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.tabButton {
+  padding: 20px 20px;
+  margin: 0px 20px;
+  border-radius: 20px 20px 0px 0px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  flex: 1;
+  color: #f5f5f5;
+  background-color: grey;
+  transition: background-color 0.3s ease;
+  font-size: 30px;
+}
+
+.tabButton:hover {
+  background-color: #666;
+}
+
+.tabButton.active {
+  background-color: #0e900e;
+  color: #f5f5f5;
+}
+
+.tabButton.active:nth-child(2) {
+  background-color: #fbbb13;
+  color: #0e900e;
+}
+
+.tabButton.active:nth-child(3) {
+  background-color: #A24B00;
+  color: #f5f5f5;
+}
+
+.projectsTab {
+  font-weight: bold;
+  font-family: 'Geoform';
+  background-color: #0E900E;
+  border-radius: 0px 0px 20px 20px;
+  padding: 20px;
+  margin: 0px 20px;
+  flex-grow: 1;
+  color: #F5F5F5;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.projectsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.projectCard {
+  border-radius: 20px;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  box-shadow: 6px 6px 15px rgba(0, 0, 0, 0.12);
+  height: 400px;
+}
+
+.projectCard a{
+  text-decoration: none;
+}
+
+.projectCard:hover {
+  transform: translateY(-5px);
+}
+
+.projectImage {
+ width: 100%;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.projectInfo {
+  padding: 5px;
+  color: #f5f5f5;
+}
+
+.projectPerformer {
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.projectTopic, .projectTitle {
+  font-size: 14px;
+  color: #f5f5f5;
+}
+
+.projectsTitle {
+  color: #f5f5f5;
+  background-color: #0E900E;
+  padding: 20px 20px 0px 20px;
+  margin: 0px 20px;
+}
+
+.casesTab {
+  font-family: 'Geoform';
+  background-color: #FBBB13;
+  border-radius: 0px 0px 20px 20px;
+  padding: 10px;
+  margin: 0px 20px;
+  flex-grow: 1;
+  color: #f5f5f5;
+}
+
+.casesTab h3{
+  color:#0E900E;
+}
+
+.casesGrid {
+  font-weight: bold;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.caseCard {
+  border-radius: 20px;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  box-shadow: 6px 6px 15px rgba(0, 0, 0, 0.12);
+  height: 400px;
+}
+
+.caseCard a{
+  text-decoration: none;
+}
+
+.caseCard:hover {
+  transform: translateY(-5px);
+}
+
+.caseImage {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.caseInfo {
+  padding: 5px;
+  color: #0E900E;
+}
+
+.casePerformer {
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 5px;
+  color: #f5f5f5;
+}
+
+.caseTopic, .caseTitle {
+  font-weight: 400;
+  font-size: 14px;
+  color: #f5f5f5;
+}
+
+.reviewsTab {
+  font-family: 'Geoform';
+  background-color: #A24B00;
+  border-radius: 0px 0px 20px 20px;
+  padding: 10px;
+  flex-grow: 1;
+  color: #f5f5f5;
+}
+
+.reviewContainer {
+  background-color: #A24B00;
+  border-radius: 0 0 20px 20px;
+  padding: 10px;
+  margin: 0px 20px;
+  flex-grow: 1;
+  color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.reviewListCustom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.reviewItemCustom {
+  display: flex;
+  gap: 16px;
+  padding: 10px;
+  background: #fff0f0;
+  border-radius: 10px;
+  align-items: center;
+  color: #600000;
+}
+
+.reviewPhotoCustom img,
+.userPhotoPlaceholderCustom {
+  width: 50px;
+  height: 50px;
+  border-radius: 20%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid #800000;
+}
+
+.reviewFormCustom {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reviewFormCustom textarea {
+  resize: vertical;
+  min-height: 60px;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  font-family: 'Geoform';
+}
+
+.reviewFormCustom button {
+  align-self: flex-end;
+  background-color: #800000;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.reviewFormCustom button:hover {
+  background-color: #aa0000;
+}
+
+.ratingStars {
+  display: flex;
+  gap: 5px;
+  margin: 8px 0;
+}
+
+.processedCase{
+  font-family: 'Geoform';
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 30px;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.processedCase button{
+  font-family: 'Malik Trial';
+  color: #0E900E;
+  background-color: #FBBB13;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 6px;
+  cursor: pointer;
+  font-weight: 600;
+  margin: 0px 10px;
+}
+
+.currentCasesSection {
+  background: #f5f5f5;
+  padding: 40px 40px;
+  margin: 40px 0px;
+  border-radius: 20px;
+}
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.sectionTitle {
+  font-family: 'Geoform';
+  font-size: 32px;
+  font-weight: 700;
+  color: #0E900E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.sectionIcon {
+  color: #FBBB13;
+  font-size: 28px;
+}
+
+.sectionSubtitle {
+  font-family: 'Geoform';
+  font-size: 18px;
+  color: #666;
+  margin: 0;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.emptyIcon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.emptyState h3 {
+  font-family: 'Geoform';
+  font-size: 24px;
+  color: #0E900E;
+  margin-bottom: 12px;
+}
+
+.emptyState p {
+  font-family: 'Geoform';
+  color: #666;
+  margin-bottom: 24px;
+  font-size: 16px;
+}
+
+.browseCasesButton {
+  background-color: #FBBB13;
+  color: #0E900E;
+  font-family: 'Malik Trial';
+  font-weight: 700;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.browseCasesButton:hover {
+  background-color: #e6a813;
+  transform: translateY(-2px);
+}
+
+.currentCasesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.currentCaseCard {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid #f0f0f0;
+}
+
+.currentCaseCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  border-color: #FBBB13;
+}
+
+.caseHeader {
+  position: relative;
+}
+
+.currentCaseImage {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.caseStatus {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+.statusBadge {
+  background: #FBBB13;
+  color: #0E900E;
+  font-family: 'Malik Trial';
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.currentCaseInfo {
+  padding: 24px;
+}
+
+.caseLink {
+  text-decoration: none;
+  color: inherit;
+}
+
+.currentCaseTitle {
+  font-family: 'Geoform';
+  font-size: 20px;
+  font-weight: 700;
+  color: #0E900E;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.currentCaseTheme {
+  font-family: 'Geoform';
+  font-size: 14px;
+  color: #FBBB13;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.clientInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.clientLabel {
+  font-family: 'Geoform';
+  font-size: 14px;
+  color: #666;
+  font-weight: 600;
+}
+
+.clientEmail {
+  font-family: 'Geoform';
+  font-size: 14px;
+  color: #0E900E;
+  font-weight: 600;
+}
+
+.caseActions {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 20px;
+}
+
+.fileUploadSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.fileUploadLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8f9fa;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: 'Geoform';
+  font-size: 14px;
+  font-weight: 600;
+  color: #0E900E;
+  border: 2px dashed #0E900E;
+  transition: all 0.3s ease;
+}
+
+.fileUploadLabel:hover {
+  background: #e8f5e8;
+}
+
+.uploadIcon {
+  font-size: 16px;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.fileCount {
+  font-family: 'Geoform';
+  font-size: 12px;
+  color: #666;
+  background: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.actionButtonsGroup {
+  display: flex;
+  gap: 12px;
+}
+
+.addFilesButton, .completeButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Malik Trial';
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  justify-content: center;
+}
+
+.addFilesButton {
+  background: #0E900E;
+  color: white;
+}
+
+.addFilesButton:hover:not(:disabled) {
+  background: #0d7c0d;
+  transform: translateY(-2px);
+}
+
+.addFilesButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.completeButton {
+  background: #FBBB13;
+  color: #0E900E;
+}
+
+.completeButton:hover {
+  background: #e6a813;
+  transform: translateY(-2px);
+}
+
+.buttonIcon {
+  font-size: 14px;
+}
+
+/* Footer */
+.footer {
+  background-color: #0E900E;
+  color: #F5F5F5;
+  padding: 20px;
+  margin-top: 40px;
+}
+
+.footerContainer {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.footerLogo {
+  display: flex;
+}
+
+.footerLogo span {
+  color: #FBBB13;
+}
+
+.footerLogo img {
+  width: clamp(80px, 18vw, 220px);
+  height: auto;
+  max-width: 100%;
+}
+
+.footerContacts {
+  font-size: 20px;
+}
+
+.footerContacts p {
+  font-family: 'Geoform';
+}
+
+.footerContacts a {
+  color: #D9D9D9;
+  text-decoration: underline;
+}
+
+.footerSocials {
+  font-size: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+
+.footerSocials img {
+  width: 30px;
+}
+
+/* Мобильные стили */
+@media (max-width: 768px) {
+  .header {
+    padding: 30px 20px 10px 20px;
+  }
+
+  .burgerMenu {
+    display: flex;
+  }
+
+  .navLinks {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 80%;
+    max-width: 300px;
+    height: 100vh;
+    background-color: #0E900E;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 80px 30px 30px;
+    gap: 25px;
+    transition: right 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  .navLinksActive {
+    right: 0;
+  }
+
+  .overlay {
+    display: block;
+  }
+
+  .mobileFooterMenu {
+    display: block;
+    margin-top: 30px;
+    width: 100%;
+    border-top: 1px solid #F5F5F5;
+    padding-top: 20px;
+  }
+
+  .centerWrapper {
+    flex-direction: column;
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .userInfo {
+    padding: 20px;
+  }
+
+  .actionButtons {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Центрируем кнопки по горизонтали */
+    gap: 15px;
+  }
+
+  .actionButton1,
+  .actionButton2,
+  .logoutButton {
+    padding: 12px 16px;
+    font-size: 14px;
+    width: 100%; /* Занимают всю доступную ширину */
+    max-width: 280px; /* Максимальная ширина для удобства */
+    text-align: center; /* Центрируем текст */
+    justify-content: center; /* Центрируем содержимое */
+  }
+
+  .tabsContainer {
+    padding: 15px;
+  }
+
+  .tabs {
+    gap: 8px;
+  }
+
+  .tabButton {
+    margin: 0;
+    padding: 15px;
+    font-size: 18px;
+    border-radius: 12px;
+    text-align: center; /* Центрируем текст в табах */
+  }
+
+  .projectsTab,
+  .casesGrid,
+  .projectsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .projectCard,
+  .caseCard {
+    height: auto;
+  }
+
+  .currentCasesSection {
+    padding: 20px;
+    margin: 20px 0;
+  }
+
+  .sectionTitle {
+    font-size: 24px;
+    text-align: center; /* Центрируем заголовок */
+  }
+
+  .currentCasesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actionButtonsGroup {
+    flex-direction: column;
+  }
+
+  .footerContainer {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .footerLogo img {
+    width: clamp(70px, 22vw, 120px);
+  }
+
+  .footerContacts {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .centerWrapper {
+    padding: 15px;
+    align-items: center;
+  }
+
+  .userInfo {
+    padding: 15px;
+    text-align: center; /* Центрируем текст в информации пользователя */
+  }
+
+  .photoWrapper {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 20px auto; /* Центрируем фото */
+  }
+
+  h1 {
+    font-size: 22px;
+    text-align: center; /* Центрируем заголовок */
+  }
+
+  .actionButtons {
+    padding: 15px;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .actionButton1,
+  .actionButton2,
+  .logoutButton {
+    padding: 12px 16px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 260px;
+  }
+
+  .tabsContainer {
+    padding: 10px;
+  }
+  .tabs {
+    gap: 5px;
+    margin: 0 20px;
+  }
+
+  .tabButton {
+    padding: 10px 6px;
+    font-size: 12px;
+    border-radius: 12px 12px 0px 0px;
+    min-width: 70px;
+  }
+
+  .currentCasesSection {
+    padding: 15px;
+  }
+
+  .sectionTitle {
+    font-size: 20px;
+  }
+
+  .footerContacts {
+    font-size: 14px;
+  }
+
+  .footerSocials {
+    justify-content: center; /* Центрируем соцсети */
+  }
+
+  .footerSocials img {
+    width: 25px;
+  }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 360px) {
+  .centerWrapper {
+    padding: 10px;
+  }
+
+  .userInfo {
+    padding: 12px;
+  }
+
+  .photoWrapper {
+    width: 100px;
+    height: 100px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .actionButton1,
+  .actionButton2,
+  .logoutButton {
+    max-width: 240px; /* Еще меньше на очень маленьких экранах */
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .footerLogo img {
+    width: 240px;
+  }
+}
