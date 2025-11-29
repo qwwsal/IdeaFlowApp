@@ -1,122 +1,149 @@
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 
-const db = new sqlite3.Database('./mydatabase.db', (err) => {
-  if (err) {
-    console.error('Ошибка при открытии базы данных:', err.message);
-  } else {
-    console.log('База данных успешно открыта');
-
-    db.serialize(() => {
-      db.run(`
-        CREATE TABLE IF NOT EXISTS Users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          email TEXT UNIQUE NOT NULL,
-          password TEXT NOT NULL,
-          firstName TEXT,
-          lastName TEXT,
-          photo TEXT,
-          description TEXT
-        )
-      `, (err) => {
-        if (err) console.error('Ошибка создания таблицы Users:', err.message);
-      });
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS Cases (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          userId INTEGER NOT NULL,
-          title TEXT NOT NULL,
-          theme TEXT,
-          description TEXT,
-          cover TEXT,
-          files TEXT,
-          status TEXT DEFAULT 'open',
-          executorId INTEGER,
-          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(userId) REFERENCES Users(id)
-        )
-      `, (err) => {
-        if (err) console.error('Ошибка создания таблицы Cases:', err.message);
-      });
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS ProcessedCases (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          caseId INTEGER NOT NULL,
-          userId INTEGER NOT NULL,
-          title TEXT NOT NULL,
-          theme TEXT,
-          description TEXT,
-          cover TEXT,
-          files TEXT,
-          status TEXT DEFAULT 'in_process',
-          executorEmail TEXT,
-          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(caseId) REFERENCES Cases(id),
-          FOREIGN KEY(userId) REFERENCES Users(id)
-        )
-      `, (err) => {
-        if (err) console.error('Ошибка создания таблицы ProcessedCases:', err.message);
-      });
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS Projects (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          caseId INTEGER NOT NULL,
-          userId INTEGER NOT NULL,
-          title TEXT NOT NULL,
-          theme TEXT,
-          description TEXT,
-          cover TEXT,
-          files TEXT,
-          status TEXT DEFAULT 'closed',
-          executorEmail TEXT,
-          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(userId) REFERENCES Users(id),
-          FOREIGN KEY(caseId) REFERENCES Cases(id)
-        )
-      `, (err) => {
-        if (err) console.error('Ошибка создания таблицы Projects:', err.message);
-      });
-
-      db.run(`
-        CREATE TABLE IF NOT EXISTS Reviews (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          userId INTEGER NOT NULL,
-          reviewerId INTEGER NOT NULL,
-          reviewerName TEXT,
-          reviewerPhoto TEXT,
-          text TEXT NOT NULL,
-          rating INTEGER NOT NULL,
-          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(userId) REFERENCES Users(id),
-          FOREIGN KEY(reviewerId) REFERENCES Users(id)
-        )
-      `, (err) => {
-        if (err) console.error('Ошибка создания таблицы Reviews:', err.message);
-        else console.log('Таблица Reviews успешно создана или уже существует');
-      });
-
-      // Добавляем столбец reviewerId если таблица уже существовала
-      db.all("PRAGMA table_info(Reviews)", (err, rows) => {
-  if (err) {
-    console.error('Ошибка при проверке структуры таблицы Reviews:', err.message);
-    return;
-  }
-  
-  const hasReviewerId = rows.some(row => row.name === 'reviewerId');
-  if (!hasReviewerId) {
-    db.run("ALTER TABLE Reviews ADD COLUMN reviewerId INTEGER", (err) => {
-      if (err) {
-        console.error('Ошибка при добавлении столбца reviewerId:', err.message);
-      } else {
-        console.log('Столбец reviewerId успешно добавлен в таблицу Reviews');
-      }
-    });
-  }
-});
-    });
+// Создаем пул подключений к PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Обязательно для Railway
   }
 });
 
-module.exports = db;
+// Функция для инициализации таблиц
+async function initializeDatabase() {
+  try {
+    console.log('Подключение к PostgreSQL...');
+
+    // Создаем таблицу Users
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS Users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        firstName TEXT,
+        lastName TEXT,
+        photo TEXT,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Таблица Users создана или уже существует');
+
+    // Создаем таблицу Cases
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS Cases (
+        id SERIAL PRIMARY KEY,
+        userId INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        theme TEXT,
+        description TEXT,
+        cover TEXT,
+        files TEXT,
+        status TEXT DEFAULT 'open',
+        executorId INTEGER,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(userId) REFERENCES Users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Таблица Cases создана или уже существует');
+
+    // Создаем таблицу ProcessedCases
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ProcessedCases (
+        id SERIAL PRIMARY KEY,
+        caseId INTEGER NOT NULL,
+        userId INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        theme TEXT,
+        description TEXT,
+        cover TEXT,
+        files TEXT,
+        status TEXT DEFAULT 'in_process',
+        executorEmail TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(caseId) REFERENCES Cases(id) ON DELETE CASCADE,
+        FOREIGN KEY(userId) REFERENCES Users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Таблица ProcessedCases создана или уже существует');
+
+    // Создаем таблицу Projects
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS Projects (
+        id SERIAL PRIMARY KEY,
+        caseId INTEGER NOT NULL,
+        userId INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        theme TEXT,
+        description TEXT,
+        cover TEXT,
+        files TEXT,
+        status TEXT DEFAULT 'closed',
+        executorEmail TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(userId) REFERENCES Users(id) ON DELETE CASCADE,
+        FOREIGN KEY(caseId) REFERENCES Cases(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Таблица Projects создана или уже существует');
+
+    // Создаем таблицу Reviews
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS Reviews (
+        id SERIAL PRIMARY KEY,
+        userId INTEGER NOT NULL,
+        reviewerId INTEGER NOT NULL,
+        reviewerName TEXT,
+        reviewerPhoto TEXT,
+        text TEXT NOT NULL,
+        rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(userId) REFERENCES Users(id) ON DELETE CASCADE,
+        FOREIGN KEY(reviewerId) REFERENCES Users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Таблица Reviews создана или уже существует');
+
+    console.log('Все таблицы успешно инициализированы');
+
+  } catch (err) {
+    console.error('Ошибка при инициализации базы данных:', err);
+    throw err;
+  }
+}
+
+// Тестовое подключение
+async function testConnection() {
+  try {
+    const result = await pool.query('SELECT version()');
+    console.log('PostgreSQL подключен успешно:', result.rows[0].version);
+    return true;
+  } catch (err) {
+    console.error('Ошибка подключения к PostgreSQL:', err);
+    return false;
+  }
+}
+
+// Универсальная функция для запросов
+async function query(text, params) {
+  try {
+    const result = await pool.query(text, params);
+    return result;
+  } catch (err) {
+    console.error('Ошибка выполнения запроса:', err);
+    throw err;
+  }
+}
+
+// Инициализация при старте
+testConnection().then(success => {
+  if (success) {
+    initializeDatabase();
+  }
+});
+
+module.exports = {
+  query,
+  pool,
+  initializeDatabase,
+  testConnection
+};

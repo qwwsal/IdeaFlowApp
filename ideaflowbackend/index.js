@@ -4,10 +4,10 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const db = require('./database');
+const { query, pool, initializeDatabase } = require('./database'); // Импортируем из нового database.js
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // Логирование запросов
 app.use((req, res, next) => {
@@ -21,7 +21,14 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
 
-app.use(cors());
+// CORS настройка для Railway
+app.use(cors({
+  origin: [
+    'https://ideaflowapp-production.up.railway.app',
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
 
 // Раздача статики из uploads
 app.use('/uploads', express.static(uploadsDir, {
@@ -29,7 +36,6 @@ app.use('/uploads', express.static(uploadsDir, {
     res.set('Access-Control-Allow-Origin', '*');
   }
 }));
-
 
 // Настройка multer для файлов
 const storage = multer.diskStorage({
@@ -44,24 +50,25 @@ const upload = multer({ storage });
 // Парсинг JSON тела
 app.use(express.json());
 
-// Middleware для получения текущего пользователя (упрощенная версия)
-// В реальном приложении здесь должна быть проверка JWT токена или сессии
-const getCurrentUser = (req, res, next) => {
-  // Временное решение - предполагаем, что текущий пользователь передается в заголовках
-  // В реальном приложении используйте аутентификацию через JWT
+// Middleware для получения текущего пользователя
+const getCurrentUser = async (req, res, next) => {
   const userId = req.headers['x-user-id'] || req.query.currentUserId;
   
   if (!userId) {
     return res.status(401).json({ error: 'Пользователь не авторизован' });
   }
   
-  db.get('SELECT id, email, firstName, lastName, photo, description FROM Users WHERE id = ?', [userId], (err, user) => {
-    if (err || !user) {
+  try {
+    const result = await query('SELECT id, email, firstName, lastName, photo, description FROM Users WHERE id = $1', [userId]);
+    if (!result.rows[0]) {
       return res.status(401).json({ error: 'Пользователь не найден' });
     }
-    req.currentUser = user;
+    req.currentUser = result.rows[0];
     next();
-  });
+  } catch (err) {
+    console.error('Ошибка при получении пользователя:', err);
+    return res.status(500).json({ error: 'Ошибка сервера' });
+  }
 };
 
 // Регистрация
@@ -69,25 +76,36 @@ app.post('/register', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ error: 'Email и пароль обязательны' });
+  
   try {
     const hash = await bcrypt.hash(password, 10);
-    db.run('INSERT INTO Users (email, password) VALUES (?, ?)', [email, hash], function (err) {
-      if (err) return res.status(400).json({ error: 'Email уже зарегистрирован' });
-      res.json({ id: this.lastID, email });
-    });
+    const result = await query(
+      'INSERT INTO Users (email, password) VALUES ($1, $2) RETURNING id, email',
+      [email, hash]
+    );
+    res.json(result.rows[0]);
   } catch (err) {
+    if (err.code === '23505') { // unique violation
+      return res.status(400).json({ error: 'Email уже зарегистрирован' });
+    }
+    console.error('Ошибка регистрации:', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
 // Вход
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  db.get('SELECT * FROM Users WHERE email = ?', [email], async (err, user) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
+  
+  try {
+    const result = await query('SELECT * FROM Users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    
     if (!user) return res.status(400).json({ error: 'Пользователь не найден' });
+    
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ error: 'Неверный пароль' });
+    
     res.json({ 
       id: user.id, 
       email: user.email,
@@ -95,7 +113,10 @@ app.post('/login', (req, res) => {
       lastName: user.lastName,
       photo: user.photo
     });
-  });
+  } catch (err) {
+    console.error('Ошибка входа:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
 // Получение данных текущего пользователя
@@ -104,153 +125,217 @@ app.get('/current-user', getCurrentUser, (req, res) => {
 });
 
 // Профиль
-app.get('/profile/:id', (req, res) => {
+app.get('/profile/:id', async (req, res) => {
   const id = req.params.id;
-  db.get('SELECT id, email, firstName, lastName, photo, description FROM Users WHERE id = ?', [id], (err, user) => {
-    if (err) return res.status(500).json({ error: 'Ошибка сервера' });
-    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-    res.json(user);
-  });
+  
+  try {
+    const result = await query(
+      'SELECT id, email, firstName, lastName, photo, description FROM Users WHERE id = $1',
+      [id]
+    );
+    
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Ошибка получения профиля:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
-app.put('/profile/:id', (req, res) => {
+app.put('/profile/:id', async (req, res) => {
   const id = req.params.id;
   const { firstName, lastName, photo, description } = req.body;
-  db.run(
-    'UPDATE Users SET firstName = ?, lastName = ?, photo = ?, description = ? WHERE id = ?',
-    [firstName, lastName, photo, description, id],
-    function (err) {
-      if (err) return res.status(500).json({ error: 'Ошибка обновления профиля' });
-      res.json({ message: 'Профиль успешно обновлён' });
-    }
-  );
+  
+  try {
+    const result = await query(
+      'UPDATE Users SET firstName = $1, lastName = $2, photo = $3, description = $4 WHERE id = $5 RETURNING *',
+      [firstName, lastName, photo, description, id]
+    );
+    
+    res.json({ message: 'Профиль успешно обновлён', user: result.rows[0] });
+  } catch (err) {
+    console.error('Ошибка обновления профиля:', err);
+    res.status(500).json({ error: 'Ошибка обновления профиля' });
+  }
 });
 
 // Создание кейса
 const uploadCaseFiles = upload.fields([{ name: 'cover', maxCount: 1 }, { name: 'files', maxCount: 15 }]);
 
-app.post('/cases', (req, res, next) => {
-  uploadCaseFiles(req, res, (err) => {
-    if (err) {
-      console.error('Ошибка Multer:', err);
-      return res.status(500).json({ error: 'Ошибка загрузки файлов' });
-    }
-    console.log('req.body:', req.body);
-    console.log('req.files:', req.files);
-    next();
-  });
-}, (req, res) => {
-  const { userId, title, theme, description } = req.body;
-  if (!userId || !title)
-    return res.status(400).json({ error: 'userId и title обязательны' });
+app.post('/cases', uploadCaseFiles, async (req, res) => {
+  try {
+    const { userId, title, theme, description } = req.body;
+    if (!userId || !title)
+      return res.status(400).json({ error: 'userId и title обязательны' });
 
-  let coverPath = null;
-  if (req.files.cover && req.files.cover[0])
-    coverPath = `/uploads/${req.files.cover[0].filename}`;
+    let coverPath = null;
+    if (req.files.cover && req.files.cover[0])
+      coverPath = `/uploads/${req.files.cover[0].filename}`;
 
-  let filesPaths = [];
-  if (req.files.files)
-    filesPaths = req.files.files.map(file => `/uploads/${file.filename}`);
+    let filesPaths = [];
+    if (req.files.files)
+      filesPaths = req.files.files.map(file => `/uploads/${file.filename}`);
 
-  const stmt = db.prepare(
-    `INSERT INTO Cases (userId, title, theme, description, cover, files, status) VALUES (?, ?, ?, ?, ?, ?, ?)`
-  );
-  stmt.run(userId, title, theme || '', description || '', coverPath, JSON.stringify(filesPaths), 'open', function (err) {
-    if (err) {
-      console.error('Ошибка вставки в базу:', err);
-      return res.status(500).json({ error: 'Ошибка при сохранении кейса' });
-    }
-    res.json({ id: this.lastID, message: 'Кейс успешно создан' });
-  });
+    const result = await query(
+      `INSERT INTO Cases (userId, title, theme, description, cover, files, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [userId, title, theme || '', description || '', coverPath, JSON.stringify(filesPaths), 'open']
+    );
+
+    res.json({ id: result.rows[0].id, message: 'Кейс успешно создан' });
+  } catch (err) {
+    console.error('Ошибка создания кейса:', err);
+    res.status(500).json({ error: 'Ошибка при сохранении кейса' });
+  }
 });
 
-
 // Получение кейсов с фильтрацией
-app.get('/cases', (req, res) => {
+app.get('/cases', async (req, res) => {
   const userId = req.query.userId;
-  let sql = `SELECT Cases.*, Users.email as userEmail FROM Cases LEFT JOIN Users ON Cases.userId = Users.id`;
-  const params = [];
-  if (userId) {
-    sql += ' WHERE Cases.userId = ?';
-    params.push(userId);
-  }
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Ошибка при получении кейсов' });
-    rows.forEach(row => { row.files = row.files ? JSON.parse(row.files) : []; });
+  
+  try {
+    let sql = `SELECT Cases.*, Users.email as userEmail FROM Cases LEFT JOIN Users ON Cases.userId = Users.id`;
+    const params = [];
+    
+    if (userId) {
+      sql += ' WHERE Cases.userId = $1';
+      params.push(userId);
+    }
+    
+    const result = await query(sql, params);
+    const rows = result.rows.map(row => ({
+      ...row,
+      files: row.files ? JSON.parse(row.files) : []
+    }));
+    
     res.json(rows);
-  });
+  } catch (err) {
+    console.error('Ошибка получения кейсов:', err);
+    res.status(500).json({ error: 'Ошибка при получении кейсов' });
+  }
 });
 
 // Детали кейса
-app.get('/cases/:id', (req, res) => {
+app.get('/cases/:id', async (req, res) => {
   const id = req.params.id;
-  const sql = `SELECT Cases.*, Users.email as userEmail FROM Cases LEFT JOIN Users ON Cases.userId = Users.id WHERE Cases.id = ?`;
-  db.get(sql, [id], (err, row) => {
-    if (err) {
-      console.error('Ошибка при получении кейса:', err);
-      return res.status(500).json({ error: 'Ошибка при получении кейса' });
+  
+  try {
+    const result = await query(
+      `SELECT Cases.*, Users.email as userEmail FROM Cases LEFT JOIN Users ON Cases.userId = Users.id WHERE Cases.id = $1`,
+      [id]
+    );
+    
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Кейс не найден' });
     }
-    if (!row) return res.status(404).json({ error: 'Кейс не найден' });
+    
+    const row = result.rows[0];
     row.files = row.files ? JSON.parse(row.files) : [];
     res.json(row);
-  });
+  } catch (err) {
+    console.error('Ошибка получения кейса:', err);
+    res.status(500).json({ error: 'Ошибка при получении кейса' });
+  }
 });
 
 // Принять кейс (перенос в ProcessedCases)
 app.put('/cases/:id/accept', async (req, res) => {
   const caseId = Number(req.params.id);
   const { executorId } = req.body;
+  
   if (!executorId || isNaN(caseId)) {
     return res.status(400).json({ error: 'Неверные параметры' });
   }
+  
   try {
-    const caseRow = await new Promise((resolve, reject) =>
-      db.get('SELECT * FROM Cases WHERE id = ?', [caseId], (err, row) => err ? reject(err) : resolve(row))
-    );
-    if (!caseRow) return res.status(404).json({ error: 'Кейс не найден' });
-
-    const userRow = await new Promise((resolve, reject) =>
-      db.get('SELECT email FROM Users WHERE id = ?', [executorId], (err, row) => err ? reject(err) : resolve(row))
-    );
-    const executorEmail = userRow ? userRow.email : null;
-
-    await new Promise((resolve, reject) => {
-      db.run(`INSERT INTO ProcessedCases (caseId, userId, title, theme, description, cover, files, status, executorId, executorEmail)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [caseRow.id, caseRow.userId, caseRow.title, caseRow.theme, caseRow.description, caseRow.cover, caseRow.files, 'in_process', executorId, executorEmail],
-        function (err) { if (err) reject(err); else resolve(); });
-    });
-
-    await new Promise((resolve, reject) =>
-      db.run('UPDATE Cases SET status = ? WHERE id = ?', ['accepted', caseId], (err) => err ? reject(err) : resolve())
-    );
-
-    res.json({ message: 'Кейс принят', caseId });
+    // Начинаем транзакцию
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Получаем кейс
+      const caseResult = await client.query('SELECT * FROM Cases WHERE id = $1', [caseId]);
+      if (!caseResult.rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Кейс не найден' });
+      }
+      
+      const caseRow = caseResult.rows[0];
+      
+      // Получаем email исполнителя
+      const userResult = await client.query('SELECT email FROM Users WHERE id = $1', [executorId]);
+      const executorEmail = userResult.rows[0] ? userResult.rows[0].email : null;
+      
+      // Создаем запись в ProcessedCases
+      await client.query(
+        `INSERT INTO ProcessedCases (caseId, userId, title, theme, description, cover, files, status, executorId, executorEmail)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [caseRow.id, caseRow.userId, caseRow.title, caseRow.theme, caseRow.description, caseRow.cover, 
+         caseRow.files, 'in_process', executorId, executorEmail]
+      );
+      
+      // Обновляем статус кейса
+      await client.query('UPDATE Cases SET status = $1 WHERE id = $2', ['accepted', caseId]);
+      
+      await client.query('COMMIT');
+      res.json({ message: 'Кейс принят', caseId });
+      
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
+    console.error('Ошибка принятия кейса:', err);
     res.status(500).json({ error: err.message || 'Ошибка сервера' });
   }
 });
 
 // Получение принятых кейсов
-app.get('/processed-cases', (req, res) => {
-  let sql = `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id`;
-  db.all(sql, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Ошибка при получении принятых кейсов' });
-    rows.forEach(row => { row.files = row.files ? JSON.parse(row.files) : []; });
+app.get('/processed-cases', async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id`
+    );
+    
+    const rows = result.rows.map(row => ({
+      ...row,
+      files: row.files ? JSON.parse(row.files) : []
+    }));
+    
     res.json(rows);
-  });
+  } catch (err) {
+    console.error('Ошибка получения принятых кейсов:', err);
+    res.status(500).json({ error: 'Ошибка при получении принятых кейсов' });
+  }
 });
 
 // Детали принятого кейса
-app.get('/processed-cases/:id', (req, res) => {
+app.get('/processed-cases/:id', async (req, res) => {
   const id = req.params.id;
-  const sql = `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id WHERE ProcessedCases.id = ?`;
-  db.get(sql, [id], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Ошибка при получении принятого кейса' });
-    if (!row) return res.status(404).json({ error: 'Кейс не найден' });
+  
+  try {
+    const result = await query(
+      `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id WHERE ProcessedCases.id = $1`,
+      [id]
+    );
+    
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Кейс не найден' });
+    }
+    
+    const row = result.rows[0];
     row.files = row.files ? JSON.parse(row.files) : [];
     res.json(row);
-  });
+  } catch (err) {
+    console.error('Ошибка получения принятого кейса:', err);
+    res.status(500).json({ error: 'Ошибка при получении принятого кейса' });
+  }
 });
 
 // Загрузка фото профиля
@@ -261,150 +346,198 @@ app.post('/upload-photo', upload.single('photo'), (req, res) => {
 
 // Загрузка файлов для принятых кейсов
 const uploadExtraFiles = upload.array('extraFiles', 15);
-app.post('/processed-cases/:id/upload-files', uploadExtraFiles, (req, res) => {
+app.post('/processed-cases/:id/upload-files', uploadExtraFiles, async (req, res) => {
   const id = req.params.id;
-  if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'Файлы не выбраны' });
-
-  db.get('SELECT files FROM ProcessedCases WHERE id = ?', [id], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-    if (!row) return res.status(404).json({ error: 'Кейс не найден' });
-    let existingFiles = row.files ? JSON.parse(row.files) : [];
+  
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'Файлы не выбраны' });
+  }
+  
+  try {
+    const result = await query('SELECT files FROM ProcessedCases WHERE id = $1', [id]);
+    
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Кейс не найден' });
+    }
+    
+    let existingFiles = result.rows[0].files ? JSON.parse(result.rows[0].files) : [];
     const newFiles = req.files.map(file => `/uploads/${file.filename}`);
     const updatedFiles = existingFiles.concat(newFiles);
-
-    db.run('UPDATE ProcessedCases SET files = ? WHERE id = ?', [JSON.stringify(updatedFiles), id], err => {
-      if (err) return res.status(500).json({ error: 'Ошибка сохранения файлов' });
-      res.json({ message: 'Файлы добавлены', files: updatedFiles });
-    });
-  });
+    
+    await query('UPDATE ProcessedCases SET files = $1 WHERE id = $2', [JSON.stringify(updatedFiles), id]);
+    res.json({ message: 'Файлы добавлены', files: updatedFiles });
+    
+  } catch (err) {
+    console.error('Ошибка загрузки файлов:', err);
+    res.status(500).json({ error: 'Ошибка сохранения файлов' });
+  }
 });
 
 // Завершение принятого кейса, создание проекта и удаление из ProcessedCases
-app.put('/processed-cases/:id/complete', (req, res) => {
+app.put('/processed-cases/:id/complete', async (req, res) => {
   const processedCaseId = Number(req.params.id);
   const { userId, title, theme, description, cover, files } = req.body;
-
-  db.get('SELECT * FROM ProcessedCases WHERE id = ? AND executorId = ?', [processedCaseId, userId], (err, pCase) => {
-    if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-    if (!pCase) return res.status(404).json({ error: 'Кейс не найден или не назначен вам' });
-
-    db.get('SELECT email FROM Users WHERE id = ?', [userId], (err, userRow) => {
-      if (err) return res.status(500).json({ error: 'Ошибка базы данных' });
-
-      const executorEmail = userRow ? userRow.email : null;
-
-      const stmt = db.prepare(`INSERT INTO Projects (caseId, userId, title, theme, description, cover, files, status, executorEmail)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-      stmt.run(
-        pCase.caseId,
-        pCase.userId,
-        title || pCase.title,
-        theme || pCase.theme,
-        description || pCase.description,
-        cover || pCase.cover,
-        files ? JSON.stringify(files) : pCase.files,
-        'closed',
-        executorEmail,
-        function (err) {
-          if (err) return res.status(500).json({ error: 'Ошибка создания проекта' });
-
-          db.run('DELETE FROM ProcessedCases WHERE id = ?', [processedCaseId], (err) => {
-            if (err) return res.status(500).json({ error: 'Ошибка удаления завершённого кейса' });
-
-            res.json({ message: 'Проект успешно создан', projectId: this.lastID });
-          });
-        }
+  
+  try {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Проверяем, что кейс существует и назначен пользователю
+      const pCaseResult = await client.query(
+        'SELECT * FROM ProcessedCases WHERE id = $1 AND executorId = $2',
+        [processedCaseId, userId]
       );
-    });
-  });
+      
+      if (!pCaseResult.rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Кейс не найден или не назначен вам' });
+      }
+      
+      const pCase = pCaseResult.rows[0];
+      
+      // Получаем email исполнителя
+      const userResult = await client.query('SELECT email FROM Users WHERE id = $1', [userId]);
+      const executorEmail = userResult.rows[0] ? userResult.rows[0].email : null;
+      
+      // Создаем проект
+      const projectResult = await client.query(
+        `INSERT INTO Projects (caseId, userId, title, theme, description, cover, files, status, executorEmail)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [pCase.caseId, pCase.userId, title || pCase.title, theme || pCase.theme, 
+         description || pCase.description, cover || pCase.cover, 
+         files ? JSON.stringify(files) : pCase.files, 'closed', executorEmail]
+      );
+      
+      // Удаляем из ProcessedCases
+      await client.query('DELETE FROM ProcessedCases WHERE id = $1', [processedCaseId]);
+      
+      await client.query('COMMIT');
+      res.json({ message: 'Проект успешно создан', projectId: projectResult.rows[0].id });
+      
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Ошибка завершения кейса:', err);
+    res.status(500).json({ error: 'Ошибка создания проекта' });
+  }
 });
 
 // Получение проектов
-app.get('/projects', (req, res) => {
+app.get('/projects', async (req, res) => {
   const userId = req.query.userId;
   const userEmail = req.query.userEmail;
   
-  let sql = `
-    SELECT 
-      Projects.*, 
-      Users.email as userEmail,
-      Executors.id as executorId,
-      Executors.email as executorUserEmail
-    FROM Projects 
-    LEFT JOIN Users ON Projects.userId = Users.id 
-    LEFT JOIN Users as Executors ON Projects.executorEmail = Executors.email
-  `;
-  const params = [];
-
-  if (userId) {
-    sql += ' WHERE Projects.userId = ?';
-    params.push(userId);
-  } else if (userEmail) {
-    sql += ' WHERE Projects.executorEmail = ? AND Projects.status = "closed"';
-    params.push(userEmail);
-  }
-
-  db.all(sql, params, (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при получении проектов' });
+  try {
+    let sql = `
+      SELECT 
+        Projects.*, 
+        Users.email as userEmail,
+        Executors.id as executorId,
+        Executors.email as executorUserEmail
+      FROM Projects 
+      LEFT JOIN Users ON Projects.userId = Users.id 
+      LEFT JOIN Users as Executors ON Projects.executorEmail = Executors.email
+    `;
+    const params = [];
+    let paramCount = 0;
+    
+    if (userId) {
+      sql += ` WHERE Projects.userId = $${++paramCount}`;
+      params.push(userId);
+    } else if (userEmail) {
+      sql += ` WHERE Projects.executorEmail = $${++paramCount} AND Projects.status = 'closed'`;
+      params.push(userEmail);
     }
-    rows.forEach(row => {
-      row.files = row.files ? JSON.parse(row.files) : [];
-    });
+    
+    const result = await query(sql, params);
+    const rows = result.rows.map(row => ({
+      ...row,
+      files: row.files ? JSON.parse(row.files) : []
+    }));
+    
     res.json(rows);
-  });
+  } catch (err) {
+    console.error('Ошибка получения проектов:', err);
+    res.status(500).json({ error: 'Ошибка при получении проектов' });
+  }
 });
 
 // Получение деталей проекта
-app.get('/projects/:id', (req, res) => {
+app.get('/projects/:id', async (req, res) => {
   const id = req.params.id;
-  const sql = `SELECT Projects.*, Users.email as userEmail FROM Projects LEFT JOIN Users ON Projects.userId = Users.id WHERE Projects.id = ?`;
-  db.get(sql, [id], (err, row) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Ошибка при получении проекта' });
+  
+  try {
+    const result = await query(
+      `SELECT Projects.*, Users.email as userEmail FROM Projects LEFT JOIN Users ON Projects.userId = Users.id WHERE Projects.id = $1`,
+      [id]
+    );
+    
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Проект не найден' });
     }
-    if (!row) return res.status(404).json({ error: 'Проект не найден' });
+    
+    const row = result.rows[0];
     row.files = row.files ? JSON.parse(row.files) : [];
     res.json(row);
-  });
+  } catch (err) {
+    console.error('Ошибка получения проекта:', err);
+    res.status(500).json({ error: 'Ошибка при получении проекта' });
+  }
 });
 
 // Получить отзывы пользователя
-app.get('/reviews', (req, res) => {
+app.get('/reviews', async (req, res) => {
   const userId = req.query.userId;
-  let sql = 'SELECT * FROM Reviews';
-  const params = [];
-  if (userId) {
-    sql += ' WHERE userId = ?';
-    params.push(userId);
+  
+  try {
+    let sql = 'SELECT * FROM Reviews';
+    const params = [];
+    
+    if (userId) {
+      sql += ' WHERE userId = $1';
+      params.push(userId);
+    }
+    
+    const result = await query(sql, params);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Ошибка получения отзывов:', err);
+    res.status(500).json({ error: 'Ошибка при получении отзывов' });
   }
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Ошибка при получении отзывов' });
-    res.json(rows);
-  });
 });
 
-// Добавить новый отзыв (обновленная версия с reviewerId)
-app.post('/reviews', (req, res) => {
+// Добавить новый отзыв
+app.post('/reviews', async (req, res) => {
   const { userId, reviewerId, reviewerName, reviewerPhoto, text, rating } = req.body;
-  if (!userId || !text || !rating || !reviewerId)
+  
+  if (!userId || !text || !rating || !reviewerId) {
     return res.status(400).json({ error: 'Не все обязательные поля заполнены' });
-
-  const sql = 'INSERT INTO Reviews (userId, reviewerId, reviewerName, reviewerPhoto, text, rating) VALUES (?, ?, ?, ?, ?, ?)';
-  db.run(sql, [userId, reviewerId, reviewerName, reviewerPhoto, text, rating], function (err) {
-    if (err) return res.status(500).json({ error: 'Ошибка при добавлении отзыва' });
-
-    db.all('SELECT * FROM Reviews WHERE userId = ?', [userId], (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Ошибка при обновлении отзывов' });
-      res.json(rows);
-    });
-  });
+  }
+  
+  try {
+    const result = await query(
+      'INSERT INTO Reviews (userId, reviewerId, reviewerName, reviewerPhoto, text, rating) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [userId, reviewerId, reviewerName, reviewerPhoto, text, rating]
+    );
+    
+    // Получаем все отзывы пользователя
+    const reviewsResult = await query('SELECT * FROM Reviews WHERE userId = $1', [userId]);
+    res.json(reviewsResult.rows);
+    
+  } catch (err) {
+    console.error('Ошибка добавления отзыва:', err);
+    res.status(500).json({ error: 'Ошибка при добавлении отзыва' });
+  }
 });
 
 app.get('/', (req, res) => {
-  res.send('Welcome to the API');
+  res.send('Welcome to the IdeaFlow API');
 });
 
 // Глобальный обработчик ошибок
@@ -413,6 +546,21 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Внутренняя ошибка сервера' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server started on http://localhost:${PORT}`);
-});
+// Инициализация базы данных и запуск сервера
+async function startServer() {
+  try {
+    // Инициализируем базу данных
+    await initializeDatabase();
+    console.log('База данных инициализирована');
+    
+    // Запускаем сервер
+    app.listen(PORT, () => {
+      console.log(`Server started on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Ошибка запуска сервера:', err);
+    process.exit(1);
+  }
+}
+
+startServer();
