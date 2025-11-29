@@ -441,26 +441,73 @@ app.get('/api/cases', async (req, res) => {
   }
 });
 
-// Детали кейса
+// Детали кейса - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/cases/:id', async (req, res) => {
   const id = req.params.id;
+  console.log('🔍 Getting case details for id:', id);
   
   try {
     const result = await query(
-      `SELECT "Cases".*, "Users".email as userEmail FROM "Cases" LEFT JOIN "Users" ON "Cases".userId = "Users".id WHERE "Cases".id = $1`,
+      `SELECT 
+        c.*, 
+        u.email as userEmail 
+      FROM "Cases" c 
+      LEFT JOIN "Users" u ON c.userId = u.id 
+      WHERE c.id = $1`,
       [id]
     );
     
     if (!result.rows[0]) {
+      console.log('❌ Case not found:', id);
       return res.status(404).json({ error: 'Кейс не найден' });
     }
     
     const row = result.rows[0];
-    row.files = row.files ? JSON.parse(row.files) : [];
-    res.json(row);
+    console.log('📄 Case data:', {
+      id: row.id,
+      title: row.title,
+      userId: row.userid,
+      hasFiles: !!row.files
+    });
+    
+    // Обработка files
+    let files = [];
+    if (row.files) {
+      if (typeof row.files === 'string') {
+        try {
+          files = JSON.parse(row.files);
+        } catch (e) {
+          console.warn('⚠️ Could not parse files for case', row.id);
+        }
+      } else if (Array.isArray(row.files)) {
+        files = row.files;
+      }
+    }
+    
+    const caseData = {
+      id: row.id,
+      title: row.title || '',
+      description: row.description || '',
+      theme: row.theme || '',
+      status: row.status || 'open',
+      userId: row.userid || row.userId,
+      userEmail: row.useremail || row.userEmail,
+      cover: row.cover,
+      files: files,
+      createdAt: row.createdat || row.createdAt,
+      updatedAt: row.updatedat || row.updatedAt
+    };
+    
+    console.log('✅ Sending case data for id:', id);
+    res.json(caseData);
+    
   } catch (err) {
-    console.error('Ошибка получения кейса:', err);
-    res.status(500).json({ error: 'Ошибка при получении кейса' });
+    console.error('❌ Ошибка получения кейса:', err);
+    console.error('❌ Error details:', err.message);
+    res.status(500).json({ 
+      error: 'Ошибка при получении кейса',
+      details: err.message
+    });
   }
 });
 
@@ -642,53 +689,123 @@ app.put('/api/processed-cases/:id/complete', async (req, res) => {
   }
 });
 
-// Получение проектов
+// Получение проектов - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/projects', async (req, res) => {
+  console.log('🔍 /api/projects called with query:', req.query);
   const userId = req.query.userId;
   const userEmail = req.query.userEmail;
   
   try {
+    // Сначала проверим структуру таблицы Projects
+    const structure = await query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'Projects' 
+      ORDER BY ordinal_position
+    `);
+    console.log('📋 Projects table structure:', structure.rows);
+    
     let sql = `
       SELECT 
-        "Projects".*, 
-        "Users".email as userEmail,
-        Executors.id as executorId,
-        Executors.email as executorUserEmail
-      FROM "Projects" 
-      LEFT JOIN "Users" ON "Projects".userId = "Users".id 
-      LEFT JOIN "Users" as Executors ON "Projects".executorEmail = Executors.email
+        p.*,
+        u.email as userEmail
+      FROM "Projects" p
+      LEFT JOIN "Users" u ON p."userId" = u.id
     `;
     const params = [];
     let paramCount = 0;
     
     if (userId) {
-      sql += ` WHERE "Projects".userId = $${++paramCount}`;
+      sql += ` WHERE p."userId" = $${++paramCount}`;
       params.push(userId);
+      console.log(`🔍 Filtering by userId: ${userId}`);
     } else if (userEmail) {
-      sql += ` WHERE "Projects".executorEmail = $${++paramCount} AND "Projects".status = 'closed'`;
+      sql += ` WHERE p."executorEmail" = $${++paramCount} AND p.status = 'closed'`;
       params.push(userEmail);
+      console.log(`🔍 Filtering by executorEmail: ${userEmail}`);
     }
     
-    const result = await query(sql, params);
-    const rows = result.rows.map(row => ({
-      ...row,
-      files: row.files ? JSON.parse(row.files) : []
-    }));
+    console.log('📝 Projects SQL:', sql);
+    console.log('📝 Projects params:', params);
     
-    res.json(rows);
+    const result = await query(sql, params);
+    console.log('📊 Projects found:', result.rows.length);
+    
+    // Обработка данных
+    const projects = result.rows.map(row => {
+      let files = [];
+      if (row.files) {
+        if (typeof row.files === 'string') {
+          try {
+            files = JSON.parse(row.files);
+          } catch (e) {
+            console.warn('⚠️ Could not parse files for project', row.id);
+          }
+        } else if (Array.isArray(row.files)) {
+          files = row.files;
+        }
+      }
+      
+      return {
+        id: row.id,
+        caseId: row.caseid || row.caseId,
+        userId: row.userid || row.userId,
+        title: row.title || '',
+        theme: row.theme || '',
+        description: row.description || '',
+        cover: row.cover,
+        files: files,
+        status: row.status || 'closed',
+        executorEmail: row.executoremail || row.executorEmail,
+        userEmail: row.useremail || row.userEmail,
+        createdAt: row.createdat || row.createdAt,
+        updatedAt: row.updatedat || row.updatedAt
+      };
+    });
+    
+    console.log('✅ Sending projects:', projects.length);
+    res.json(projects);
+    
   } catch (err) {
-    console.error('Ошибка получения проектов:', err);
-    res.status(500).json({ error: 'Ошибка при получении проектов' });
+    console.error('❌ Ошибка получения проектов:', err);
+    console.error('❌ Error details:', err.message);
+    
+    // Fallback - простой запрос
+    try {
+      console.log('🔄 Fallback: trying simple projects query...');
+      const fallback = await query('SELECT id, title, status FROM "Projects"');
+      const simpleProjects = fallback.rows.map(row => ({
+        id: row.id,
+        title: row.title || '',
+        status: row.status || 'closed',
+        files: []
+      }));
+      
+      console.log('✅ Fallback successful, sending basic projects data');
+      res.json(simpleProjects);
+    } catch (fallbackErr) {
+      console.error('❌ Fallback also failed:', fallbackErr);
+      res.status(500).json({ 
+        error: 'Ошибка при получении проектов',
+        details: err.message
+      });
+    }
   }
 });
 
-// Получение деталей проекта
+// Получение деталей проекта - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/projects/:id', async (req, res) => {
   const id = req.params.id;
+  console.log('🔍 Getting project details for id:', id);
   
   try {
     const result = await query(
-      `SELECT "Projects".*, "Users".email as userEmail FROM "Projects" LEFT JOIN "Users" ON "Projects".userId = "Users".id WHERE "Projects".id = $1`,
+      `SELECT 
+        p.*,
+        u.email as userEmail 
+      FROM "Projects" p 
+      LEFT JOIN "Users" u ON p."userId" = u.id 
+      WHERE p.id = $1`,
       [id]
     );
     
@@ -697,11 +814,46 @@ app.get('/api/projects/:id', async (req, res) => {
     }
     
     const row = result.rows[0];
-    row.files = row.files ? JSON.parse(row.files) : [];
-    res.json(row);
+    
+    // Обработка files
+    let files = [];
+    if (row.files) {
+      if (typeof row.files === 'string') {
+        try {
+          files = JSON.parse(row.files);
+        } catch (e) {
+          console.warn('⚠️ Could not parse files for project', row.id);
+        }
+      } else if (Array.isArray(row.files)) {
+        files = row.files;
+      }
+    }
+    
+    const projectData = {
+      id: row.id,
+      caseId: row.caseid || row.caseId,
+      userId: row.userid || row.userId,
+      title: row.title || '',
+      theme: row.theme || '',
+      description: row.description || '',
+      cover: row.cover,
+      files: files,
+      status: row.status || 'closed',
+      executorEmail: row.executoremail || row.executorEmail,
+      userEmail: row.useremail || row.userEmail,
+      createdAt: row.createdat || row.createdAt,
+      updatedAt: row.updatedat || row.updatedAt
+    };
+    
+    console.log('✅ Sending project data for id:', id);
+    res.json(projectData);
   } catch (err) {
     console.error('Ошибка получения проекта:', err);
-    res.status(500).json({ error: 'Ошибка при получении проекта' });
+    console.error('❌ Error details:', err.message);
+    res.status(500).json({ 
+      error: 'Ошибка при получении проекта',
+      details: err.message
+    });
   }
 });
 
@@ -831,6 +983,29 @@ app.get('/api/debug/connection', async (req, res) => {
   }
 });
 
+// Диагностика таблицы Projects
+app.get('/api/debug/projects-structure', async (req, res) => {
+  try {
+    const structure = await query(`
+      SELECT column_name, data_type, is_nullable 
+      FROM information_schema.columns 
+      WHERE table_name = 'Projects' 
+      ORDER BY ordinal_position
+    `);
+    
+    const samples = await query('SELECT * FROM "Projects" LIMIT 3');
+    
+    res.json({
+      tableStructure: structure.rows,
+      sampleRecords: samples.rows
+    });
+    
+  } catch (err) {
+    console.error('Error getting projects structure:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Catch-all handler для React Router
 app.get('*', (req, res) => {
   console.log(`🎯 Catch-all handler: ${req.method} ${req.path}`);
@@ -932,7 +1107,6 @@ app.get('/api/debug/cases-detailed', async (req, res) => {
     });
   }
 });
-
 
 // Глобальный обработчик ошибок
 app.use((err, req, res, next) => {
