@@ -220,81 +220,128 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Вход - ИСПРАВЛЕННАЯ ВЕРСИЯ С ДИАГНОСТИКОЙ
+// Вход - ДОБАВЛЯЕМ ДИАГНОСТИКУ ДЛЯ ФРОНТЕНДА
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   
   console.log('🔐 Login attempt for email:', email);
-  console.log('🔐 Password provided:', password ? 'yes' : 'no');
-  
-  if (!email || !password) {
-    console.log('❌ Missing email or password');
-    return res.status(400).json({ error: 'Email и пароль обязательны' });
-  }
   
   try {
-    // Проверим подключение к БД
-    const dbCheck = await query('SELECT NOW() as current_time');
-    console.log('✅ Database connection OK');
-    
-    // Ищем пользователя
-    console.log('🔍 Searching for user with email:', email);
     const result = await query('SELECT * FROM "Users" WHERE email = $1', [email]);
+    const user = result.rows[0];
     
-    if (!result.rows[0]) {
+    if (!user) {
       console.log('❌ User not found:', email);
       return res.status(400).json({ error: 'Пользователь не найден' });
     }
     
-    const user = result.rows[0];
-    console.log('✅ User found:', { 
-      id: user.id, 
-      email: user.email,
-      hasPassword: !!user.password,
-      passwordLength: user.password ? user.password.length : 0
-    });
+    console.log('✅ User found:', user.id);
     
-    // Проверим структуру пароля
-    if (!user.password) {
-      console.log('❌ User has no password in database');
-      return res.status(400).json({ error: 'Ошибка в данных пользователя' });
-    }
-    
-    console.log('🔐 Comparing passwords...');
     const match = await bcrypt.compare(password, user.password);
-    
     if (!match) {
       console.log('❌ Password mismatch for user:', email);
-      
-      // Дополнительная диагностика - попробуем проверить без хэширования (для теста)
-      if (password === user.password) {
-        console.log('⚠️ Password matches without hashing - password not hashed in DB');
-      }
-      
       return res.status(400).json({ error: 'Неверный пароль' });
     }
     
     console.log('🎉 Login successful for user:', user.id);
     
-    res.json({ 
-      id: user.id, 
-      email: user.email,
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      photo: user.photo || null
-    });
+    // Подробная информация о пользователе для фронтенда
+    const userResponse = {
+      success: true,
+      user: {
+        id: user.id, 
+        email: user.email,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        photo: user.photo || null,
+        description: user.description || ''
+      },
+      redirect: {
+        profile: `/profile/${user.id}`,
+        home: '/'
+      },
+      debug: {
+        userId: user.id,
+        message: 'После входа фронтенд должен сохранить userId и перейти на страницу профиля'
+      }
+    };
+    
+    console.log('📤 Sending login response:', userResponse);
+    res.json(userResponse);
     
   } catch (err) {
     console.error('💥 Ошибка входа:', err);
-    console.error('💥 Error details:', err.message);
-    console.error('💥 Stack trace:', err.stack);
-    
-    res.status(500).json({ 
-      error: 'Ошибка сервера при входе',
-      details: err.message 
-    });
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
+
+// Проверка профиля пользователя (публичный доступ)
+app.get('/api/user-profile/:id', async (req, res) => {
+  const id = req.params.id;
+  console.log('🔍 Getting user profile for id:', id);
+  
+  try {
+    const result = await query(
+      'SELECT id, email, "firstName", "lastName", photo, description FROM "Users" WHERE id = $1',
+      [id]
+    );
+    
+    if (!result.rows[0]) {
+      console.log('❌ User profile not found:', id);
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    const userProfile = result.rows[0];
+    console.log('✅ User profile found:', userProfile);
+    
+    res.json(userProfile);
+  } catch (err) {
+    console.error('Ошибка получения профиля:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Проверка доступности страницы профиля
+app.get('/api/debug/profile-access/:id', async (req, res) => {
+  const id = req.params.id;
+  console.log('🔍 Debug profile access for id:', id);
+  
+  try {
+    // Проверяем существование пользователя
+    const userResult = await query('SELECT id, email FROM "Users" WHERE id = $1', [id]);
+    const userExists = !!userResult.rows[0];
+    
+    // Проверяем кейсы пользователя
+    const casesResult = await query('SELECT COUNT(*) as count FROM "Cases" WHERE "userId" = $1', [id]);
+    const casesCount = parseInt(casesResult.rows[0].count);
+    
+    // Проверяем проекты пользователя
+    const projectsResult = await query('SELECT COUNT(*) as count FROM "Projects" WHERE "userId" = $1', [id]);
+    const projectsCount = parseInt(projectsResult.rows[0].count);
+    
+    const debugInfo = {
+      userId: id,
+      userExists: userExists,
+      userEmail: userExists ? userResult.rows[0].email : null,
+      casesCount: casesCount,
+      projectsCount: projectsCount,
+      profileUrl: `/profile/${id}`,
+      apiUrls: {
+        profile: `/api/user-profile/${id}`,
+        userCases: `/api/cases?userId=${id}`,
+        userProjects: `/api/projects?userId=${id}`
+      }
+    };
+    
+    console.log('📊 Profile debug info:', debugInfo);
+    res.json(debugInfo);
+    
+  } catch (err) {
+    console.error('Error in profile debug:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // Получение данных текущего пользователя - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/current-user', getCurrentUser, (req, res) => {
