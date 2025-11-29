@@ -311,7 +311,6 @@ app.post('/api/cases', uploadCaseFiles, async (req, res) => {
 // Получение кейсов с фильтрацией - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/cases', async (req, res) => {
   console.log('🔍 /api/cases called with query:', req.query);
-  console.log('🔍 Request headers:', req.headers);
   
   const userId = req.query.userId;
   
@@ -368,50 +367,77 @@ app.get('/api/cases', async (req, res) => {
       });
     });
     
-    const rows = result.rows.map(row => {
-      // Обрабатываем files - может быть string, array или null
+    // Обработка данных для фронтенда
+    const processedRows = result.rows.map(row => {
+      // Обработка поля files
       let files = [];
-      try {
-        if (row.files) {
-          if (typeof row.files === 'string') {
+      if (row.files) {
+        if (typeof row.files === 'string') {
+          try {
             files = JSON.parse(row.files);
-          } else if (Array.isArray(row.files)) {
-            files = row.files;
+          } catch (e) {
+            console.warn(`⚠️ Could not parse files for case ${row.id}:`, row.files);
+            files = [];
           }
+        } else if (Array.isArray(row.files)) {
+          files = row.files;
         }
-      } catch (parseError) {
-        console.error('❌ Error parsing files for case', row.id, ':', parseError);
-        files = [];
       }
       
+      // Создаем гарантированно правильный объект
       return {
-        ...row,
+        id: row.id,
+        title: row.title || '',
+        description: row.description || '',
+        status: row.status || 'open',
+        userId: row.userid || row.userId,
+        userEmail: row.useremail || row.userEmail,
         files: files,
-        // Нормализуем названия полей
-        createdAt: row.createdat || row.createdAt
+        createdAt: row.createdat || row.createdAt || new Date().toISOString(),
+        updatedAt: row.updatedat || row.updatedAt || new Date().toISOString()
       };
     });
     
-    console.log('✅ Sending cases:', rows.length);
-    res.json(rows);
+    console.log('✅ Successfully processed cases:', processedRows.length);
+    res.json(processedRows);
     
   } catch (err) {
     console.error('❌ Ошибка получения кейсов:', err);
-    console.error('❌ Stack trace:', err.stack);
     
-    // Более детальная информация об ошибке
-    if (err.code) {
-      console.error('❌ PostgreSQL error code:', err.code);
+    // Fallback - попробуем получить базовые данные
+    try {
+      console.log('🔄 Fallback: trying basic query...');
+      let fallbackSql = 'SELECT id, title, status FROM "Cases"';
+      const fallbackParams = [];
+      
+      if (userId) {
+        fallbackSql += ' WHERE userId = $1';
+        fallbackParams.push(userId);
+      }
+      
+      fallbackSql += ' ORDER BY id DESC';
+      
+      const fallbackResult = await query(fallbackSql, fallbackParams);
+      const fallbackRows = fallbackResult.rows.map(row => ({
+        id: row.id,
+        title: row.title || '',
+        status: row.status || 'open',
+        userId: row.userid || null,
+        userEmail: null,
+        files: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+      
+      console.log('✅ Fallback successful, sending basic data');
+      res.json(fallbackRows);
+    } catch (fallbackErr) {
+      console.error('❌ Fallback also failed:', fallbackErr);
+      res.status(500).json({ 
+        error: 'Ошибка при получении кейсов',
+        details: err.message
+      });
     }
-    if (err.position) {
-      console.error('❌ Error position:', err.position);
-    }
-    
-    res.status(500).json({ 
-      error: 'Ошибка при получении кейсов',
-      details: err.message,
-      code: err.code
-    });
   }
 });
 
@@ -832,6 +858,81 @@ app.get('*', (req, res) => {
     });
   }
 });
+
+// Детальная диагностика таблицы Cases
+app.get('/api/debug/cases-detailed', async (req, res) => {
+  try {
+    console.log('🔍 Detailed Cases diagnostics...');
+    
+    // 1. Проверим структуру таблицы Cases
+    const structure = await query(`
+      SELECT column_name, data_type, is_nullable 
+      FROM information_schema.columns 
+      WHERE table_name = 'Cases' 
+      ORDER BY ordinal_position
+    `);
+    console.log('📋 Cases table structure:', structure.rows);
+
+    // 2. Проверим есть ли данные
+    const countResult = await query('SELECT COUNT(*) as count FROM "Cases"');
+    console.log('📊 Cases count:', countResult.rows[0].count);
+
+    // 3. Попробуем получить данные разными способами
+    let casesData;
+    try {
+      // Способ 1: Простой SELECT
+      casesData = await query('SELECT * FROM "Cases" LIMIT 3');
+      console.log('✅ Simple SELECT worked');
+    } catch (err1) {
+      console.error('❌ Simple SELECT failed:', err1.message);
+      
+      try {
+        // Способ 2: SELECT с конкретными полями
+        casesData = await query('SELECT id, title, status FROM "Cases" LIMIT 3');
+        console.log('✅ SELECT with specific fields worked');
+      } catch (err2) {
+        console.error('❌ SELECT with specific fields failed:', err2.message);
+        
+        // Способ 3: Проверим какие поля вообще есть
+        const sample = await query('SELECT * FROM "Cases" LIMIT 1');
+        console.log('📋 Sample row:', sample.rows[0]);
+        casesData = sample;
+      }
+    }
+
+    // 4. Проверим JOIN с Users
+    let joinResult;
+    try {
+      joinResult = await query(`
+        SELECT "Cases".*, "Users".email 
+        FROM "Cases" 
+        LEFT JOIN "Users" ON "Cases".userId = "Users".id 
+        LIMIT 2
+      `);
+      console.log('✅ JOIN with Users worked');
+    } catch (err) {
+      console.error('❌ JOIN with Users failed:', err.message);
+      joinResult = { error: err.message };
+    }
+
+    res.json({
+      tableStructure: structure.rows,
+      rowCount: countResult.rows[0].count,
+      sampleData: casesData?.rows || [],
+      joinTest: joinResult?.rows || joinResult,
+      allTables: (await query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`)).rows
+    });
+
+  } catch (err) {
+    console.error('❌ Detailed diagnostics failed:', err);
+    res.status(500).json({ 
+      error: 'Diagnostics failed',
+      details: err.message,
+      stack: err.stack
+    });
+  }
+});
+
 
 // Глобальный обработчик ошибок
 app.use((err, req, res, next) => {
