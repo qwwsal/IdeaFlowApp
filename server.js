@@ -751,6 +751,47 @@ app.get('*', (req, res) => {
   }
 });
 
+
+// Диагностика подключения к БД
+app.get('/api/debug/connection', async (req, res) => {
+  try {
+    // Получим информацию о подключении
+    const dbInfo = await query(`
+      SELECT 
+        current_database() as database,
+        current_user as user,
+        inet_server_addr() as host,
+        inet_server_port() as port,
+        version() as version
+    `);
+    
+    // Проверим все таблицы
+    const tables = await query(`
+      SELECT table_name, table_type 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+    
+    // Количество записей в каждой таблице
+    const tableCounts = {};
+    for (let table of tables.rows) {
+      const countResult = await query(`SELECT COUNT(*) as count FROM "${table.table_name}"`);
+      tableCounts[table.table_name] = countResult.rows[0].count;
+    }
+    
+    res.json({
+      connection: dbInfo.rows[0],
+      tables: tables.rows,
+      tableCounts: tableCounts
+    });
+    
+  } catch (err) {
+    console.error('Connection debug error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Глобальный обработчик ошибок
 app.use((err, req, res, next) => {
   console.error('Глобальная ошибка сервера:', err.stack);
