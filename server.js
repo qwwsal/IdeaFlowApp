@@ -220,11 +220,12 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Вход - ДОБАВЛЯЕМ ДИАГНОСТИКУ ДЛЯ ФРОНТЕНДА
+// Вход - ДОБАВЛЯЕМ РЕДИРЕКТ НА СТОРОНЕ СЕРВЕРА
 app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, redirect = true } = req.body;
   
   console.log('🔐 Login attempt for email:', email);
+  console.log('🔐 Redirect enabled:', redirect);
   
   try {
     const result = await query('SELECT * FROM "Users" WHERE email = $1', [email]);
@@ -245,7 +246,6 @@ app.post('/api/login', async (req, res) => {
     
     console.log('🎉 Login successful for user:', user.id);
     
-    // Подробная информация о пользователе для фронтенда
     const userResponse = {
       success: true,
       user: {
@@ -260,13 +260,19 @@ app.post('/api/login', async (req, res) => {
         profile: `/profile/${user.id}`,
         home: '/'
       },
-      debug: {
+      session: {
         userId: user.id,
-        message: 'После входа фронтенд должен сохранить userId и перейти на страницу профиля'
+        token: `user-${user.id}-${Date.now()}`
       }
     };
     
-    console.log('📤 Sending login response:', userResponse);
+    // Если фронтенд не делает редирект, делаем его на стороне сервера
+    if (redirect && req.get('Accept')?.includes('text/html')) {
+      console.log('🔄 Performing server-side redirect to profile');
+      return res.redirect(`/profile/${user.id}`);
+    }
+    
+    console.log('📤 Sending JSON login response');
     res.json(userResponse);
     
   } catch (err) {
