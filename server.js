@@ -146,23 +146,46 @@ app.get('/api/debug/cases-structure', async (req, res) => {
   }
 });
 
-// Middleware для получения текущего пользователя
+// Middleware для получения текущего пользователя - ИСПРАВЛЕННАЯ ВЕРСИЯ
 const getCurrentUser = async (req, res, next) => {
-  const userId = req.headers['x-user-id'] || req.query.currentUserId;
-  
-  if (!userId) {
-    return res.status(401).json({ error: 'Пользователь не авторизован' });
-  }
-  
   try {
-    const result = await query('SELECT id, email, "firstName", "lastName", photo, description FROM "Users" WHERE id = $1', [userId]);
+    // Получаем userId из разных источников
+    let userId = req.headers['x-user-id'] || 
+                 req.query.currentUserId || 
+                 req.body.userId;
+    
+    console.log('🔍 getCurrentUser called with userId:', userId);
+    console.log('🔍 Headers:', req.headers);
+    
+    if (!userId) {
+      console.log('❌ No userId provided in request');
+      return res.status(401).json({ error: 'Пользователь не авторизован' });
+    }
+    
+    // Преобразуем в число если нужно
+    userId = parseInt(userId);
+    if (isNaN(userId)) {
+      console.log('❌ Invalid userId format:', userId);
+      return res.status(401).json({ error: 'Неверный формат пользователя' });
+    }
+    
+    console.log('🔍 Searching for user with id:', userId);
+    const result = await query(
+      'SELECT id, email, "firstName", "lastName", photo, description FROM "Users" WHERE id = $1', 
+      [userId]
+    );
+    
     if (!result.rows[0]) {
+      console.log('❌ User not found in database:', userId);
       return res.status(401).json({ error: 'Пользователь не найден' });
     }
+    
     req.currentUser = result.rows[0];
+    console.log('✅ Current user set:', req.currentUser);
     next();
+    
   } catch (err) {
-    console.error('Ошибка при получении пользователя:', err);
+    console.error('💥 Ошибка при получении пользователя:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -197,26 +220,57 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Вход
+// Вход - ИСПРАВЛЕННАЯ ВЕРСИЯ С ДИАГНОСТИКОЙ
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   
   console.log('🔐 Login attempt for email:', email);
+  console.log('🔐 Password provided:', password ? 'yes' : 'no');
+  
+  if (!email || !password) {
+    console.log('❌ Missing email or password');
+    return res.status(400).json({ error: 'Email и пароль обязательны' });
+  }
   
   try {
-    const result = await query('SELECT * FROM "Users" WHERE email = $1', [email]);
-    const user = result.rows[0];
+    // Проверим подключение к БД
+    const dbCheck = await query('SELECT NOW() as current_time');
+    console.log('✅ Database connection OK');
     
-    if (!user) {
+    // Ищем пользователя
+    console.log('🔍 Searching for user with email:', email);
+    const result = await query('SELECT * FROM "Users" WHERE email = $1', [email]);
+    
+    if (!result.rows[0]) {
       console.log('❌ User not found:', email);
       return res.status(400).json({ error: 'Пользователь не найден' });
     }
     
-    console.log('✅ User found:', user.id);
+    const user = result.rows[0];
+    console.log('✅ User found:', { 
+      id: user.id, 
+      email: user.email,
+      hasPassword: !!user.password,
+      passwordLength: user.password ? user.password.length : 0
+    });
     
+    // Проверим структуру пароля
+    if (!user.password) {
+      console.log('❌ User has no password in database');
+      return res.status(400).json({ error: 'Ошибка в данных пользователя' });
+    }
+    
+    console.log('🔐 Comparing passwords...');
     const match = await bcrypt.compare(password, user.password);
+    
     if (!match) {
       console.log('❌ Password mismatch for user:', email);
+      
+      // Дополнительная диагностика - попробуем проверить без хэширования (для теста)
+      if (password === user.password) {
+        console.log('⚠️ Password matches without hashing - password not hashed in DB');
+      }
+      
       return res.status(400).json({ error: 'Неверный пароль' });
     }
     
@@ -225,18 +279,26 @@ app.post('/api/login', async (req, res) => {
     res.json({ 
       id: user.id, 
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      photo: user.photo
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      photo: user.photo || null
     });
+    
   } catch (err) {
     console.error('💥 Ошибка входа:', err);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('💥 Error details:', err.message);
+    console.error('💥 Stack trace:', err.stack);
+    
+    res.status(500).json({ 
+      error: 'Ошибка сервера при входе',
+      details: err.message 
+    });
   }
 });
 
-// Получение данных текущего пользователя
+// Получение данных текущего пользователя - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/current-user', getCurrentUser, (req, res) => {
+  console.log('✅ Sending current user data:', req.currentUser);
   res.json(req.currentUser);
 });
 
