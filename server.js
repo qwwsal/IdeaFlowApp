@@ -9,6 +9,17 @@ const { query, pool, initializeDatabase } = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// 🔥 Обработка неперехваченных исключений
+process.on('uncaughtException', (error) => {
+  console.error('🔥 UNCAUGHT EXCEPTION:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔥 UNHANDLED REJECTION at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 // Диагностика при запуске
 console.log('🚀 Starting IdeaFlow Server...');
 console.log('📁 Current directory:', __dirname);
@@ -35,12 +46,9 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
 
-// CORS настройка для Railway
+// ✅ Упрощенный CORS
 app.use(cors({
-  origin: [
-    'https://ideaflowapp-production.up.railway.app',
-    'http://localhost:3000'
-  ],
+  origin: true, // разрешить все origins
   credentials: true
 }));
 
@@ -66,6 +74,35 @@ const upload = multer({ storage });
 
 // Парсинг JSON тела
 app.use(express.json());
+
+// ✅ Тестовые маршруты - должны работать всегда
+app.get('/api/test', (req, res) => {
+  console.log('✅ Test endpoint called');
+  res.json({ message: 'API is working!', timestamp: new Date().toISOString() });
+});
+
+app.post('/api/test-login', (req, res) => {
+  console.log('✅ Test login called:', req.body);
+  res.json({ message: 'Test login successful', user: { id: 1, email: 'test@test.com' } });
+});
+
+// ✅ Проверка подключения к БД
+app.get('/api/debug/db', async (req, res) => {
+  try {
+    const result = await query('SELECT COUNT(*) as user_count FROM Users');
+    res.json({ 
+      status: 'OK',
+      userCount: result.rows[0].user_count,
+      database: 'Connected'
+    });
+  } catch (err) {
+    console.error('Database connection error:', err);
+    res.status(500).json({ 
+      error: 'Database error',
+      message: err.message 
+    });
+  }
+});
 
 // Middleware для получения текущего пользователя
 const getCurrentUser = async (req, res, next) => {
@@ -122,14 +159,26 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   
+  console.log('🔐 Login attempt for email:', email);
+  
   try {
     const result = await query('SELECT * FROM Users WHERE email = $1', [email]);
     const user = result.rows[0];
     
-    if (!user) return res.status(400).json({ error: 'Пользователь не найден' });
+    if (!user) {
+      console.log('❌ User not found:', email);
+      return res.status(400).json({ error: 'Пользователь не найден' });
+    }
+    
+    console.log('✅ User found:', user.id);
     
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ error: 'Неверный пароль' });
+    if (!match) {
+      console.log('❌ Password mismatch for user:', email);
+      return res.status(400).json({ error: 'Неверный пароль' });
+    }
+    
+    console.log('🎉 Login successful for user:', user.id);
     
     res.json({ 
       id: user.id, 
@@ -139,7 +188,7 @@ app.post('/api/login', async (req, res) => {
       photo: user.photo
     });
   } catch (err) {
-    console.error('Ошибка входа:', err);
+    console.error('💥 Ошибка входа:', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
