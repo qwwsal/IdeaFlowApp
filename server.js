@@ -602,21 +602,28 @@ app.post('/api/reviews', async (req, res) => {
 
 // Catch-all handler для React Router
 app.get('*', (req, res) => {
+  console.log(`🎯 Catch-all handler: ${req.method} ${req.path}`);
+  
   // Пропускаем API запросы и статические файлы
   if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
-    return res.status(404).json({ error: 'Route not found' });
+    console.log(`❌ API route not found: ${req.path}`);
+    return res.status(404).json({ 
+      error: 'API route not found', 
+      path: req.path,
+      message: 'Check server logs for available routes'
+    });
   }
   
   // Для всех остальных запросов отдаем React приложение
   const indexPath = path.join(__dirname, 'build', 'index.html');
   if (fs.existsSync(indexPath)) {
+    console.log(`✅ Serving React app for: ${req.path}`);
     res.sendFile(indexPath);
   } else {
+    console.log(`❌ Build folder not found for: ${req.path}`);
     res.status(500).json({ 
       error: 'Frontend not built',
-      message: 'React build folder not found. Run: npm run build',
-      currentDir: __dirname,
-      buildPath: buildPath
+      message: 'React build folder not found'
     });
   }
 });
