@@ -9,6 +9,20 @@ const { query, pool, initializeDatabase } = require('./database');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Диагностика при запуске
+console.log('🚀 Starting IdeaFlow Server...');
+console.log('📁 Current directory:', __dirname);
+
+// Проверяем существование build папки
+const buildPath = path.join(__dirname, 'build');
+if (fs.existsSync(buildPath)) {
+  console.log('✅ Build folder exists');
+  const buildContents = fs.readdirSync(buildPath);
+  console.log('📁 Build contents:', buildContents);
+} else {
+  console.log('❌ Build folder NOT found - frontend not built');
+}
+
 // Логирование запросов
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -37,8 +51,8 @@ app.use('/uploads', express.static(uploadsDir, {
   }
 }));
 
-// Обслуживание статических файлов React приложения из папки ideaflow/build
-app.use(express.static(path.join(__dirname, 'ideaflow', 'build')));
+// Обслуживание статических файлов React из корневой build папки
+app.use(express.static(path.join(__dirname, 'build')));
 
 // Настройка multer для файлов
 const storage = multer.diskStorage({
@@ -537,9 +551,25 @@ app.post('/api/reviews', async (req, res) => {
   }
 });
 
-// SPA fallback - все остальные запросы отправляем на index.html фронтенда
+// Catch-all handler для React Router
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'ideaflow', 'build', 'index.html'));
+  // Пропускаем API запросы и статические файлы
+  if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+    return res.status(404).json({ error: 'Route not found' });
+  }
+  
+  // Для всех остальных запросов отдаем React приложение
+  const indexPath = path.join(__dirname, 'build', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(500).json({ 
+      error: 'Frontend not built',
+      message: 'React build folder not found. Run: npm run build',
+      currentDir: __dirname,
+      buildPath: buildPath
+    });
+  }
 });
 
 // Глобальный обработчик ошибок
@@ -554,15 +584,6 @@ async function startServer() {
     await initializeDatabase();
     console.log('База данных инициализирована');
     
-// Обслуживание статических файлов React в production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'build')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
-  });
-}
-
     app.listen(PORT, () => {
       console.log(`Server started on port ${PORT}`);
       console.log(`Frontend available at: https://ideaflowapp-production.up.railway.app`);
