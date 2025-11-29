@@ -72,6 +72,16 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// Middleware для отключения кэширования API
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+});
+
+
 // Парсинг JSON тела
 app.use(express.json());
 
