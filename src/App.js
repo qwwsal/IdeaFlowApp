@@ -38,27 +38,17 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/add-case" element={<AddCasePage />} />
 
-      {/* ВАЖНО: СНАЧАЛА МАРШРУТ С ПАРАМЕТРОМ, ПОТОМ БЕЗ */}
+      {/* ПРОСМОТР ЧУЖОГО ПРОФИЛЯ - ОТКРЫТЫЙ ДОСТУП */}
       <Route path="/profile/:userId" element={<ProfileView />} />
-      
-      {/* ЗАЩИЩЕННЫЙ МАРШРУТ - СОБСТВЕННЫЙ ПРОФИЛЬ */}
+
+      {/* СОБСТВЕННЫЙ ПРОФИЛЬ - ЗАЩИЩЕННЫЙ */}
       <Route
-        path="/my-profile"
+        path="/myprofile"
         element={
           <ProtectedRoute>
             <ProfilePage />
           </ProtectedRoute>
         }
-      />
-
-      {/* РЕДИРЕКТ С /profile НА /my-profile ТОЛЬКО ЕСЛИ НЕТ userId */}
-      <Route 
-        path="/profile" 
-        element={
-          <ProtectedRoute>
-            <Navigate to="/my-profile" replace />
-          </ProtectedRoute>
-        } 
       />
 
       {/* Все остальные пути редиректим на главную */}

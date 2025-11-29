@@ -103,7 +103,7 @@ export default function CasePage() {
           <Link to="/profile">Профиль</Link>
           <Link to="/cases">Кейсы</Link>
           <Link to="/projects">Проекты</Link>
-          <Link to="/profile">
+          <Link to="/myprofile">
             <button className={styles.buttonYellow}>Разместить проект</button>
           </Link>
           <Link to="/cases">
