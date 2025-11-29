@@ -49,15 +49,9 @@ export default function SignInPage() {
         firstName: localStorage.getItem('userFirstName')
       });
       
-      // ПЕРЕХОДИМ НА ПРОФИЛЬ КОНКРЕТНОГО ПОЛЬЗОВАТЕЛЯ
-      const userId = data.user?.id || data.id;
-      if (userId) {
-        console.log(`🔄 Redirecting to profile page: /profile/${userId}`);
-        navigate(`/profile/${userId}`);
-      } else {
-        console.error('❌ No user ID in response:', data);
-        navigate('/profile');
-      }
+      // ИСПРАВЛЕНИЕ: ПЕРЕХОДИМ НА СВОЙ ПРОФИЛЬ (БЕЗ ID)
+      console.log('🔄 Redirecting to own profile page: /profile');
+      navigate('/profile'); // Важно: без ID, чтобы открылся ProfilePage
       
     } catch (err) {
       console.error('💥 Login error:', err);
