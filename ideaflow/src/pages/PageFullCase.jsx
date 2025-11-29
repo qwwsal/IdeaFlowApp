@@ -12,6 +12,9 @@ export default function PageFullCase() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const userId = localStorage.getItem('currentUserId');
+  
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -20,7 +23,8 @@ export default function PageFullCase() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`http://localhost:3001/cases/${id}`)
+    // Исправлено: заменил URL на API_BASE_URL
+    fetch(`${API_BASE_URL}/cases/${id}`)
       .then(res => {
         if (!res.ok) {
           throw new Error(`Ошибка загрузки кейса: ${res.status} ${res.statusText}`);
@@ -45,7 +49,8 @@ export default function PageFullCase() {
       navigate('/signin');
       return;
     }
-    fetch(`http://localhost:3001/cases/${id}/accept`, {
+    // Исправлено: заменил URL на API_BASE_URL
+    fetch(`${API_BASE_URL}/cases/${id}/accept`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ executorId: parseInt(userId, 10) }),
@@ -131,7 +136,8 @@ export default function PageFullCase() {
 
       <main className={styles.container}>
         <h1 className={styles.title}>{caseData.title}</h1>
-        {caseData.cover && <img src={`http://localhost:3001${caseData.cover}`} alt="Обложка" className={styles.cover} />}
+        {/* Исправлено: убрал localhost из пути к изображению */}
+        {caseData.cover && <img src={`${caseData.cover}`} alt="Обложка" className={styles.cover} />}
         
         <div className={styles.infoSection}>
           <p><b>Заказчик: </b> 
@@ -151,7 +157,8 @@ export default function PageFullCase() {
             <div className={styles.filesList}>
               {caseData.files && caseData.files.length > 0 ? (
                 caseData.files.map((file, i) => (
-                  <a key={i} href={`http://localhost:3001${file}`} target="_blank" rel="noreferrer" className={styles.fileItem}>
+                  // Исправлено: убрал localhost из пути к файлу
+                  <a key={i} href={`${file}`} target="_blank" rel="noreferrer" className={styles.fileItem}>
                     {file.split('/').pop()}
                   </a>
                 ))

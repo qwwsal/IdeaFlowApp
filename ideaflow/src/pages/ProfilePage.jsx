@@ -32,6 +32,9 @@ export default function ProfilePage() {
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
 
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -50,7 +53,8 @@ export default function ProfilePage() {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:3001/profile/${userId}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const res = await fetch(`${API_BASE_URL}/profile/${userId}`);
         if (!res.ok) throw new Error('Ошибка загрузки данных пользователя');
         const data = await res.json();
         setFormData({
@@ -70,12 +74,14 @@ export default function ProfilePage() {
 
     const fetchProjectsAsCustomer = async () => {
       try {
-        const resProjects = await fetch(`http://localhost:3001/projects?userId=${userId}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const resProjects = await fetch(`${API_BASE_URL}/projects?userId=${userId}`);
         if (!resProjects.ok) throw new Error('Ошибка загрузки проектов как заказчика');
         const projectsDataRaw = await resProjects.json();
         const projectsData = projectsDataRaw.filter(p => p.status === 'closed');
 
-        const resCases = await fetch(`http://localhost:3001/cases?userId=${userId}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const resCases = await fetch(`${API_BASE_URL}/cases?userId=${userId}`);
         if (!resCases.ok) throw new Error('Ошибка загрузки кейсов заказчика');
         const casesDataRaw = await resCases.json();
         const casesData = casesDataRaw.filter(c => c.status === 'open');
@@ -95,7 +101,8 @@ export default function ProfilePage() {
 
     const fetchCompletedExecutorProjects = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/projects?executorEmail=${encodeURIComponent(userEmail)}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const res = await fetch(`${API_BASE_URL}/projects?executorEmail=${encodeURIComponent(userEmail)}`);
         if (!res.ok) throw new Error('Ошибка загрузки проектов исполнителя');
         const data = await res.json();
         const closedProjects = data.filter(p => p.status === 'closed');
@@ -107,7 +114,8 @@ export default function ProfilePage() {
 
     const fetchInProcessExecutorCases = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/processed-cases`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const res = await fetch(`${API_BASE_URL}/processed-cases`);
         if (!res.ok) throw new Error('Ошибка загрузки принятых кейсов');
         const data = await res.json();
         const filtered = data.filter(
@@ -121,7 +129,8 @@ export default function ProfilePage() {
 
     const fetchReviews = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/reviews?userId=${userId}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const response = await fetch(`${API_BASE_URL}/reviews?userId=${userId}`);
         if (!response.ok) throw new Error('Ошибка загрузки отзывов');
         const data = await response.json();
         setReviews(data);
@@ -157,7 +166,8 @@ export default function ProfilePage() {
     const data = new FormData();
     data.append('photo', file);
     try {
-      const response = await fetch('http://localhost:3001/upload-photo', {
+      // Исправлено: заменил URL на API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/upload-photo`, {
         method: 'POST',
         body: data,
       });
@@ -175,7 +185,8 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!userId) return;
     try {
-      const response = await fetch(`http://localhost:3001/profile/${userId}`, {
+      // Исправлено: заменил URL на API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/profile/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -213,7 +224,8 @@ export default function ProfilePage() {
     });
 
     try {
-      const response = await fetch(`http://localhost:3001/processed-cases/${caseId}/upload-files`, {
+      // Исправлено: заменил URL на API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/processed-cases/${caseId}/upload-files`, {
         method: 'POST',
         body: formData,
       });
@@ -226,7 +238,8 @@ export default function ProfilePage() {
       const result = await response.json();
       alert('Файлы успешно добавлены');
 
-      const resCases = await fetch(`http://localhost:3001/processed-cases`);
+      // Исправлено: заменил URL на API_BASE_URL
+      const resCases = await fetch(`${API_BASE_URL}/processed-cases`);
       const updatedCases = await resCases.json();
       setInProcessExecutorCases(updatedCases.filter(c => c.executorId === Number(userId) && c.status === 'in_process'));
       setSelectedFiles(prev => ({ ...prev, [caseId]: null }));
@@ -237,7 +250,8 @@ export default function ProfilePage() {
 
   const handleCompleteCase = async caseId => {
     try {
-      const response = await fetch(`http://localhost:3001/processed-cases/${caseId}/complete`, {
+      // Исправлено: заменил URL на API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/processed-cases/${caseId}/complete`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
@@ -246,9 +260,11 @@ export default function ProfilePage() {
       if (!response.ok) throw new Error(result.error || 'Ошибка завершения кейса');
       alert('Кейс завершён и добавлен в проекты');
 
-      const resCases = await fetch(`http://localhost:3001/processed-cases`);
+      // Исправлено: заменил URL на API_BASE_URL
+      const resCases = await fetch(`${API_BASE_URL}/processed-cases`);
       const dataCases = await resCases.json();
-      const resProjects = await fetch(`http://localhost:3001/projects`);
+      // Исправлено: заменил URL на API_BASE_URL
+      const resProjects = await fetch(`${API_BASE_URL}/projects`);
       const dataProjects = await resProjects.json();
 
       const filteredCases = dataCases.filter(c => c.executorId === Number(userId) && c.status === 'in_process');
@@ -285,7 +301,8 @@ export default function ProfilePage() {
                   {p.status === 'open' ? (
                     <Link to={`/cases/${p.id}`} className={styles.casesLink}>
                       <img
-                        src={`http://localhost:3001${p.cover || ''}`}
+                        // Исправлено: убрал localhost из пути к изображению
+                        src={`${p.cover || ''}`}
                         alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
                         className={styles.projectImage}
                       />
@@ -298,7 +315,8 @@ export default function ProfilePage() {
                   ) : (
                     <Link to={`/projects/${p.id}`} className={styles.projectLink}>
                       <img
-                        src={`http://localhost:3001${p.cover || ''}`}
+                        // Исправлено: убрал localhost из пути к изображению
+                        src={`${p.cover || ''}`}
                         alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
                         className={styles.projectImage}
                       />
@@ -336,7 +354,8 @@ export default function ProfilePage() {
                   <div className={styles.projectCard}>
                     <img
                       className={styles.projectImage}
-                      src={`http://localhost:3001${proj.cover || ''}`}
+                      // Исправлено: убрал localhost из пути к изображению
+                      src={`${proj.cover || ''}`}
                       alt={`Фото исполнителя ${proj.executorEmail}`}
                     />
                     <div className={styles.projectInfo}>
@@ -369,7 +388,8 @@ export default function ProfilePage() {
                   <div key={r.id} className={styles.reviewItemCustom}>
                     <div className={styles.reviewPhotoCustom}>
                       {r.reviewerPhoto ? (
-                        <img src={`http://localhost:3001${r.reviewerPhoto}`} alt={r.reviewerName} />
+                        // Исправлено: убрал localhost из пути к изображению
+                        <img src={`${r.reviewerPhoto}`} alt={r.reviewerName} />
                       ) : (
                         <div className={styles.userPhotoPlaceholderCustom}></div>
                       )}
@@ -454,7 +474,8 @@ export default function ProfilePage() {
         <div className={styles.userInfo}>
           <div className={styles.photoWrapper} title="Выберите фото профиля">
             {formData.photo ? (
-              <img src={`http://localhost:3001${formData.photo}`} alt="User" className={styles.userPhoto} />
+              // Исправлено: убрал localhost из пути к изображению
+              <img src={`${formData.photo}`} alt="User" className={styles.userPhoto} />
             ) : (
               <div className={styles.userPhotoPlaceholder}>Фото</div>
             )}
@@ -582,7 +603,8 @@ export default function ProfilePage() {
                 <div className={styles.caseHeader}>
                   <Link to={`/processed-cases/${c.id}`} className={styles.caseLink}>
                     <img
-                      src={`http://localhost:3001${c.cover || '/images/default-case.jpg'}`}
+                      // Исправлено: убрал localhost из пути к изображению
+                      src={`${c.cover || '/images/default-case.jpg'}`}
                       alt={`Обложка проекта ${c.title}`}
                       className={styles.currentCaseImage}
                     />

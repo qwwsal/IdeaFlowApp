@@ -9,6 +9,9 @@ export default function SignInPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -17,7 +20,8 @@ export default function SignInPage() {
     e.preventDefault();
     setError('');
     try {
-      const response = await fetch('http://localhost:3001/login', {
+      // Исправлено: заменил URL на API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({email, password}),

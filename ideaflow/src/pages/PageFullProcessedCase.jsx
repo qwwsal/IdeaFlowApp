@@ -10,6 +10,9 @@ export default function PageFullProcessedCase() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -19,7 +22,8 @@ export default function PageFullProcessedCase() {
     setLoading(true);
     setError(null);
     
-    fetch(`http://localhost:3001/processed-cases/${id}`)
+    // Исправлено: заменил URL на API_BASE_URL
+    fetch(`${API_BASE_URL}/processed-cases/${id}`)
       .then(res => {
         if (!res.ok) {
           throw new Error(`Ошибка загрузки кейса: ${res.status} ${res.statusText}`);
@@ -98,7 +102,8 @@ export default function PageFullProcessedCase() {
         
         {caseData.cover && (
           <img 
-            src={`http://localhost:3001${caseData.cover}`} 
+            // Исправлено: убрал localhost из пути к изображению
+            src={`${caseData.cover}`} 
             alt="Обложка" 
             className={styles.cover} 
           />
@@ -143,7 +148,8 @@ export default function PageFullProcessedCase() {
                 caseData.files.map((file, i) => (
                   <a 
                     key={i} 
-                    href={`http://localhost:3001${file}`} 
+                    // Исправлено: убрал localhost из пути к файлу
+                    href={`${file}`} 
                     target="_blank" 
                     rel="noreferrer" 
                     className={styles.fileItem}

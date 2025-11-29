@@ -10,13 +10,17 @@ export default function CasePage() {
   const [loading, setLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:3001/cases?status=open')
+    // Исправлено: заменил URL на API_BASE_URL
+    fetch(`${API_BASE_URL}/cases?status=open`)
       .then(res => res.json())
       .then(data => {
         setCases(data);
@@ -199,7 +203,8 @@ export default function CasePage() {
               <div className={styles.projectCard}>
                 <img
                   className={styles.projectImage}
-                  src={`http://localhost:3001${caseItem.cover || ''}`}
+                  // Исправлено: заменил URL на относительный путь
+                  src={`${caseItem.cover || ''}`}
                   alt="Обложка кейса"
                 />
                 <div className={styles.projectInfo}>

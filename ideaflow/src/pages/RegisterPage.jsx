@@ -9,6 +9,9 @@ export default function RegisterPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -17,7 +20,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     try {
-      const response = await fetch('http://localhost:3001/register', {
+      // Исправлено: заменил URL на API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({email, password}),

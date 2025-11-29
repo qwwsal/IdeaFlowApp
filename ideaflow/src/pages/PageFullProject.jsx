@@ -10,6 +10,9 @@ export default function PageFullProject() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -18,7 +21,8 @@ export default function PageFullProject() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`http://localhost:3001/projects/${id}`)
+    // Исправлено: заменил URL на API_BASE_URL
+    fetch(`${API_BASE_URL}/projects/${id}`)
       .then(res => {
         if (!res.ok) {
           throw new Error(`Ошибка загрузки проекта: ${res.status} ${res.statusText}`);
@@ -96,7 +100,8 @@ export default function PageFullProject() {
         <h1 className={styles.title}>{projectData.title}</h1>
         {projectData.cover && (
           <img
-            src={`http://localhost:3001${projectData.cover}`}
+            // Исправлено: убрал localhost из пути к изображению
+            src={`${projectData.cover}`}
             alt="Обложка проекта"
             className={styles.cover}
           />
@@ -123,7 +128,8 @@ export default function PageFullProject() {
                 projectData.files.map((file, i) => (
                   <a
                     key={i}
-                    href={`http://localhost:3001${file}`}
+                    // Исправлено: убрал localhost из пути к файлу
+                    href={`${file}`}
                     target="_blank"
                     rel="noreferrer"
                     className={styles.fileItem}

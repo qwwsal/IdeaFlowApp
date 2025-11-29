@@ -4,7 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { query, pool, initializeDatabase } = require('./database'); // Импортируем из нового database.js
+const { query, pool, initializeDatabase } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,6 +36,9 @@ app.use('/uploads', express.static(uploadsDir, {
     res.set('Access-Control-Allow-Origin', '*');
   }
 }));
+
+// Обслуживание статических файлов React приложения из папки ideaflow/build
+app.use(express.static(path.join(__dirname, 'ideaflow', 'build')));
 
 // Настройка multer для файлов
 const storage = multer.diskStorage({
@@ -71,8 +74,16 @@ const getCurrentUser = async (req, res, next) => {
   }
 };
 
+// API маршруты
+app.get('/api', (req, res) => {
+  res.json({ 
+    message: 'IdeaFlow API is working!',
+    database: process.env.DATABASE_PUBLIC_URL ? 'Configured' : 'Not configured'
+  });
+});
+
 // Регистрация
-app.post('/register', async (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ error: 'Email и пароль обязательны' });
@@ -85,7 +96,7 @@ app.post('/register', async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') { // unique violation
+    if (err.code === '23505') {
       return res.status(400).json({ error: 'Email уже зарегистрирован' });
     }
     console.error('Ошибка регистрации:', err);
@@ -94,7 +105,7 @@ app.post('/register', async (req, res) => {
 });
 
 // Вход
-app.post('/login', async (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   
   try {
@@ -120,12 +131,12 @@ app.post('/login', async (req, res) => {
 });
 
 // Получение данных текущего пользователя
-app.get('/current-user', getCurrentUser, (req, res) => {
+app.get('/api/current-user', getCurrentUser, (req, res) => {
   res.json(req.currentUser);
 });
 
 // Профиль
-app.get('/profile/:id', async (req, res) => {
+app.get('/api/profile/:id', async (req, res) => {
   const id = req.params.id;
   
   try {
@@ -145,7 +156,7 @@ app.get('/profile/:id', async (req, res) => {
   }
 });
 
-app.put('/profile/:id', async (req, res) => {
+app.put('/api/profile/:id', async (req, res) => {
   const id = req.params.id;
   const { firstName, lastName, photo, description } = req.body;
   
@@ -165,7 +176,7 @@ app.put('/profile/:id', async (req, res) => {
 // Создание кейса
 const uploadCaseFiles = upload.fields([{ name: 'cover', maxCount: 1 }, { name: 'files', maxCount: 15 }]);
 
-app.post('/cases', uploadCaseFiles, async (req, res) => {
+app.post('/api/cases', uploadCaseFiles, async (req, res) => {
   try {
     const { userId, title, theme, description } = req.body;
     if (!userId || !title)
@@ -193,7 +204,7 @@ app.post('/cases', uploadCaseFiles, async (req, res) => {
 });
 
 // Получение кейсов с фильтрацией
-app.get('/cases', async (req, res) => {
+app.get('/api/cases', async (req, res) => {
   const userId = req.query.userId;
   
   try {
@@ -219,7 +230,7 @@ app.get('/cases', async (req, res) => {
 });
 
 // Детали кейса
-app.get('/cases/:id', async (req, res) => {
+app.get('/api/cases/:id', async (req, res) => {
   const id = req.params.id;
   
   try {
@@ -242,7 +253,7 @@ app.get('/cases/:id', async (req, res) => {
 });
 
 // Принять кейс (перенос в ProcessedCases)
-app.put('/cases/:id/accept', async (req, res) => {
+app.put('/api/cases/:id/accept', async (req, res) => {
   const caseId = Number(req.params.id);
   const { executorId } = req.body;
   
@@ -251,13 +262,11 @@ app.put('/cases/:id/accept', async (req, res) => {
   }
   
   try {
-    // Начинаем транзакцию
     const client = await pool.connect();
     
     try {
       await client.query('BEGIN');
       
-      // Получаем кейс
       const caseResult = await client.query('SELECT * FROM Cases WHERE id = $1', [caseId]);
       if (!caseResult.rows[0]) {
         await client.query('ROLLBACK');
@@ -266,11 +275,9 @@ app.put('/cases/:id/accept', async (req, res) => {
       
       const caseRow = caseResult.rows[0];
       
-      // Получаем email исполнителя
       const userResult = await client.query('SELECT email FROM Users WHERE id = $1', [executorId]);
       const executorEmail = userResult.rows[0] ? userResult.rows[0].email : null;
       
-      // Создаем запись в ProcessedCases
       await client.query(
         `INSERT INTO ProcessedCases (caseId, userId, title, theme, description, cover, files, status, executorId, executorEmail)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
@@ -278,7 +285,6 @@ app.put('/cases/:id/accept', async (req, res) => {
          caseRow.files, 'in_process', executorId, executorEmail]
       );
       
-      // Обновляем статус кейса
       await client.query('UPDATE Cases SET status = $1 WHERE id = $2', ['accepted', caseId]);
       
       await client.query('COMMIT');
@@ -297,7 +303,7 @@ app.put('/cases/:id/accept', async (req, res) => {
 });
 
 // Получение принятых кейсов
-app.get('/processed-cases', async (req, res) => {
+app.get('/api/processed-cases', async (req, res) => {
   try {
     const result = await query(
       `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id`
@@ -316,7 +322,7 @@ app.get('/processed-cases', async (req, res) => {
 });
 
 // Детали принятого кейса
-app.get('/processed-cases/:id', async (req, res) => {
+app.get('/api/processed-cases/:id', async (req, res) => {
   const id = req.params.id;
   
   try {
@@ -339,14 +345,14 @@ app.get('/processed-cases/:id', async (req, res) => {
 });
 
 // Загрузка фото профиля
-app.post('/upload-photo', upload.single('photo'), (req, res) => {
+app.post('/api/upload-photo', upload.single('photo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
   res.json({ photoPath: `/uploads/${req.file.filename}` });
 });
 
 // Загрузка файлов для принятых кейсов
 const uploadExtraFiles = upload.array('extraFiles', 15);
-app.post('/processed-cases/:id/upload-files', uploadExtraFiles, async (req, res) => {
+app.post('/api/processed-cases/:id/upload-files', uploadExtraFiles, async (req, res) => {
   const id = req.params.id;
   
   if (!req.files || req.files.length === 0) {
@@ -374,7 +380,7 @@ app.post('/processed-cases/:id/upload-files', uploadExtraFiles, async (req, res)
 });
 
 // Завершение принятого кейса, создание проекта и удаление из ProcessedCases
-app.put('/processed-cases/:id/complete', async (req, res) => {
+app.put('/api/processed-cases/:id/complete', async (req, res) => {
   const processedCaseId = Number(req.params.id);
   const { userId, title, theme, description, cover, files } = req.body;
   
@@ -384,7 +390,6 @@ app.put('/processed-cases/:id/complete', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // Проверяем, что кейс существует и назначен пользователю
       const pCaseResult = await client.query(
         'SELECT * FROM ProcessedCases WHERE id = $1 AND executorId = $2',
         [processedCaseId, userId]
@@ -397,11 +402,9 @@ app.put('/processed-cases/:id/complete', async (req, res) => {
       
       const pCase = pCaseResult.rows[0];
       
-      // Получаем email исполнителя
       const userResult = await client.query('SELECT email FROM Users WHERE id = $1', [userId]);
       const executorEmail = userResult.rows[0] ? userResult.rows[0].email : null;
       
-      // Создаем проект
       const projectResult = await client.query(
         `INSERT INTO Projects (caseId, userId, title, theme, description, cover, files, status, executorEmail)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
@@ -410,7 +413,6 @@ app.put('/processed-cases/:id/complete', async (req, res) => {
          files ? JSON.stringify(files) : pCase.files, 'closed', executorEmail]
       );
       
-      // Удаляем из ProcessedCases
       await client.query('DELETE FROM ProcessedCases WHERE id = $1', [processedCaseId]);
       
       await client.query('COMMIT');
@@ -429,7 +431,7 @@ app.put('/processed-cases/:id/complete', async (req, res) => {
 });
 
 // Получение проектов
-app.get('/projects', async (req, res) => {
+app.get('/api/projects', async (req, res) => {
   const userId = req.query.userId;
   const userEmail = req.query.userEmail;
   
@@ -469,7 +471,7 @@ app.get('/projects', async (req, res) => {
 });
 
 // Получение деталей проекта
-app.get('/projects/:id', async (req, res) => {
+app.get('/api/projects/:id', async (req, res) => {
   const id = req.params.id;
   
   try {
@@ -492,7 +494,7 @@ app.get('/projects/:id', async (req, res) => {
 });
 
 // Получить отзывы пользователя
-app.get('/reviews', async (req, res) => {
+app.get('/api/reviews', async (req, res) => {
   const userId = req.query.userId;
   
   try {
@@ -513,7 +515,7 @@ app.get('/reviews', async (req, res) => {
 });
 
 // Добавить новый отзыв
-app.post('/reviews', async (req, res) => {
+app.post('/api/reviews', async (req, res) => {
   const { userId, reviewerId, reviewerName, reviewerPhoto, text, rating } = req.body;
   
   if (!userId || !text || !rating || !reviewerId) {
@@ -526,7 +528,6 @@ app.post('/reviews', async (req, res) => {
       [userId, reviewerId, reviewerName, reviewerPhoto, text, rating]
     );
     
-    // Получаем все отзывы пользователя
     const reviewsResult = await query('SELECT * FROM Reviews WHERE userId = $1', [userId]);
     res.json(reviewsResult.rows);
     
@@ -536,8 +537,9 @@ app.post('/reviews', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('Welcome to the IdeaFlow API');
+// SPA fallback - все остальные запросы отправляем на index.html фронтенда
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'ideaflow', 'build', 'index.html'));
 });
 
 // Глобальный обработчик ошибок
@@ -549,13 +551,12 @@ app.use((err, req, res, next) => {
 // Инициализация базы данных и запуск сервера
 async function startServer() {
   try {
-    // Инициализируем базу данных
     await initializeDatabase();
     console.log('База данных инициализирована');
     
-    // Запускаем сервер
     app.listen(PORT, () => {
       console.log(`Server started on port ${PORT}`);
+      console.log(`Frontend available at: https://ideaflowapp-production.up.railway.app`);
     });
   } catch (err) {
     console.error('Ошибка запуска сервера:', err);

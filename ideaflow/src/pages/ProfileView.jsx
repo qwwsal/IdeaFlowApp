@@ -38,6 +38,9 @@ export default function ProfileView() {
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -60,7 +63,8 @@ export default function ProfileView() {
       try {
         const storedUserId = localStorage.getItem('currentUserId');
         if (storedUserId) {
-          const res = await fetch(`http://localhost:3001/profile/${storedUserId}`);
+          // Исправлено: заменил URL на API_BASE_URL
+          const res = await fetch(`${API_BASE_URL}/profile/${storedUserId}`);
           if (res.ok) {
             const userData = await res.json();
             setCurrentUserId(userData.id);
@@ -95,7 +99,8 @@ export default function ProfileView() {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:3001/profile/${userId}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const res = await fetch(`${API_BASE_URL}/profile/${userId}`);
         if (!res.ok) throw new Error('Ошибка загрузки данных пользователя');
         const data = await res.json();
         setFormData({
@@ -115,12 +120,14 @@ export default function ProfileView() {
 
     const fetchProjectsAsCustomer = async () => {
       try {
-        const resProjects = await fetch(`http://localhost:3001/projects?userId=${userId}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const resProjects = await fetch(`${API_BASE_URL}/projects?userId=${userId}`);
         if (!resProjects.ok) throw new Error('Ошибка загрузки проектов как заказчика');
         const projectsDataRaw = await resProjects.json();
         const projectsData = projectsDataRaw.filter(p => p.status === 'closed');
 
-        const resCases = await fetch(`http://localhost:3001/cases?userId=${userId}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const resCases = await fetch(`${API_BASE_URL}/cases?userId=${userId}`);
         if (!resCases.ok) throw new Error('Ошибка загрузки кейсов заказчика');
         const casesDataRaw = await resCases.json();
         const casesData = casesDataRaw.filter(c => c.status === 'open');
@@ -141,7 +148,8 @@ export default function ProfileView() {
 
     const fetchCompletedExecutorProjects = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/projects?executorEmail=${encodeURIComponent(userEmail)}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const res = await fetch(`${API_BASE_URL}/projects?executorEmail=${encodeURIComponent(userEmail)}`);
         if (!res.ok) throw new Error('Ошибка загрузки проектов исполнителя');
         const data = await res.json();
         const closedProjects = data.filter(p => p.status === 'closed');
@@ -153,7 +161,8 @@ export default function ProfileView() {
 
     const fetchInProcessExecutorCases = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/processed-cases`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const res = await fetch(`${API_BASE_URL}/processed-cases`);
         if (!res.ok) throw new Error('Ошибка загрузки принятых кейсов');
         const data = await res.json();
         const filtered = data.filter(
@@ -167,7 +176,8 @@ export default function ProfileView() {
 
     const fetchReviews = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/reviews?userId=${userId}`);
+        // Исправлено: заменил URL на API_BASE_URL
+        const response = await fetch(`${API_BASE_URL}/reviews?userId=${userId}`);
         if (!response.ok) throw new Error('Ошибка загрузки отзывов');
         const data = await response.json();
         setReviews(data);
@@ -241,7 +251,8 @@ export default function ProfileView() {
     };
 
     try {
-      const res = await fetch('http://localhost:3001/reviews', {
+      // Исправлено: заменил URL на API_BASE_URL
+      const res = await fetch(`${API_BASE_URL}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newReview),
@@ -261,7 +272,8 @@ export default function ProfileView() {
   const formatReviewerPhoto = (photoPath) => {
     if (!photoPath) return null;
     if (photoPath.startsWith('http')) return photoPath;
-    if (photoPath.startsWith('/')) return `http://localhost:3001${photoPath}`;
+    // Исправлено: убрал localhost из пути к изображению
+    if (photoPath.startsWith('/')) return `${photoPath}`;
     return photoPath;
   };
 
@@ -281,7 +293,8 @@ export default function ProfileView() {
                   {p.status === 'open' ? (
                     <Link to={`/cases/${p.id}`} className={styles.casesLink}>
                       <img
-                        src={`http://localhost:3001${p.cover || ''}`}
+                        // Исправлено: убрал localhost из пути к изображению
+                        src={`${p.cover || ''}`}
                         alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
                         className={styles.projectImage}
                       />
@@ -294,7 +307,8 @@ export default function ProfileView() {
                   ) : (
                     <Link to={`/projects/${p.id}`} className={styles.projectLink}>
                       <img
-                        src={`http://localhost:3001${p.cover || ''}`}
+                        // Исправлено: убрал localhost из пути к изображению
+                        src={`${p.cover || ''}`}
                         alt={`Фото исполнителя ${p.executorEmail || 'Не указан'}`}
                         className={styles.projectImage}
                       />
@@ -332,7 +346,8 @@ export default function ProfileView() {
                   <div className={styles.projectCard}>
                     <img
                       className={styles.projectImage}
-                      src={`http://localhost:3001${proj.cover || ''}`}
+                      // Исправлено: убрал localhost из пути к изображению
+                      src={`${proj.cover || ''}`}
                       alt={`Фото исполнителя ${proj.executorEmail}`}
                     />
                     <div className={styles.projectInfo}>
@@ -511,7 +526,8 @@ export default function ProfileView() {
       <div className={styles.userInfo}>
         <div className={styles.photoWrapper}>
           {formData.photo ? (
-            <img src={`http://localhost:3001${formData.photo}`} alt="User" className={styles.userPhoto} />
+            // Исправлено: убрал localhost из пути к изображению
+            <img src={`${formData.photo}`} alt="User" className={styles.userPhoto} />
           ) : (
             <div className={styles.userPhotoPlaceholder}>Фото</div>
           )}

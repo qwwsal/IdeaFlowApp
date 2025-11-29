@@ -10,10 +10,14 @@ export default function HomePage() {
   const navigate = useNavigate();
   
   const userId = localStorage.getItem('currentUserId');
+  
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
 
   useEffect(() => {
     // Загрузить завершенные проекты
-    fetch('http://localhost:3001/projects')
+    // Исправлено: заменил URL на API_BASE_URL
+    fetch(`${API_BASE_URL}/projects`)
       .then(res => res.json())
       .then(data => {
         const closedProjects = data.filter(p => p.status === 'closed');
@@ -22,7 +26,8 @@ export default function HomePage() {
       .catch(() => setDoneProjects([]));
 
     // Загрузить открытые кейсы
-    fetch('http://localhost:3001/cases')
+    // Исправлено: заменил URL на API_BASE_URL
+    fetch(`${API_BASE_URL}/cases`)
       .then(res => res.json())
       .then(data => {
         const openCases = data.filter(c => c.status === 'open');
@@ -138,7 +143,8 @@ export default function HomePage() {
               activeTab === 'done' ? (
                 <Link key={id} to={`/projects/${id}`} className={styles.projectCardLink}>
                   <div className={styles.projectCard}>
-                    {cover && <img src={`http://localhost:3001${cover}`} alt={`Фото исполнителя ${executorEmail}`} />}
+                    {/* Исправлено: убрал localhost из пути к изображению */}
+                    {cover && <img src={`${cover}`} alt={`Фото исполнителя ${executorEmail}`} />}
                     <div style={{ padding: '8px' }}>
                       <span>{executorEmail}</span><br />
                       <span>{theme || title}</span>
@@ -148,7 +154,8 @@ export default function HomePage() {
               ) : (
                 <Link key={id} to={`/cases/${id}`} className={styles.projectCardLink}>
                   <div className={styles.projectCard}>
-                    {cover && <img src={`http://localhost:3001${cover}`} alt={`Фото заказчика ${userEmail}`} />}
+                    {/* Исправлено: убрал localhost из пути к изображению */}
+                    {cover && <img src={`${cover}`} alt={`Фото заказчика ${userEmail}`} />}
                     <div style={{ padding: '8px' }}>
                       <span>{userEmail}</span><br />
                       <span>{theme || title}</span>

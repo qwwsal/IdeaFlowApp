@@ -3,15 +3,14 @@ const { Pool } = require('pg');
 // Создаем пул подключений к PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false // Обязательно для Railway
-  }
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // Функция для инициализации таблиц
 async function initializeDatabase() {
   try {
     console.log('Подключение к PostgreSQL...');
+    console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
 
     // Создаем таблицу Users
     await pool.query(`
@@ -114,11 +113,12 @@ async function initializeDatabase() {
 // Тестовое подключение
 async function testConnection() {
   try {
+    console.log('Testing connection to:', process.env.DATABASE_URL ? process.env.DATABASE_URL.split('@')[1] : 'No DATABASE_URL');
     const result = await pool.query('SELECT version()');
     console.log('PostgreSQL подключен успешно:', result.rows[0].version);
     return true;
   } catch (err) {
-    console.error('Ошибка подключения к PostgreSQL:', err);
+    console.error('Ошибка подключения к PostgreSQL:', err.message);
     return false;
   }
 }
@@ -133,13 +133,6 @@ async function query(text, params) {
     throw err;
   }
 }
-
-// Инициализация при старте
-testConnection().then(success => {
-  if (success) {
-    initializeDatabase();
-  }
-});
 
 module.exports = {
   query,

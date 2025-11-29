@@ -11,6 +11,9 @@ export default function AddCasePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigate = useNavigate();
+  
+  // Добавлено: API базовый URL
+  const API_BASE_URL = '/api';
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
@@ -51,7 +54,8 @@ export default function AddCasePage() {
     files.forEach((file) => formData.append('files', file));
 
     try {
-      const response = await fetch('http://localhost:3001/cases', {
+      // Исправлено: заменил URL на API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/cases`, {
         method: 'POST',
         body: formData,
       });
