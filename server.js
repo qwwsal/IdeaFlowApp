@@ -296,7 +296,7 @@ app.post('/api/cases', uploadCaseFiles, async (req, res) => {
       filesPaths = req.files.files.map(file => `/uploads/${file.filename}`);
 
     const result = await query(
-      `INSERT INTO "Cases" (userId, title, theme, description, cover, files, status) 
+      `INSERT INTO "Cases" ("userId", title, theme, description, cover, files, status) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [userId, title, theme || '', description || '', coverPath, JSON.stringify(filesPaths), 'open']
     );
@@ -308,64 +308,35 @@ app.post('/api/cases', uploadCaseFiles, async (req, res) => {
   }
 });
 
-// Получение кейсов с фильтрацией - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// Получение кейсов с фильтрацией - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/cases', async (req, res) => {
   console.log('🔍 /api/cases called with query:', req.query);
   
   const userId = req.query.userId;
   
   try {
-    // Сначала проверим подключение к БД
-    const dbCheck = await query('SELECT NOW() as current_time');
-    console.log('✅ Database connection OK:', dbCheck.rows[0].current_time);
-    
-    // Проверим существование таблицы Cases
-    const tableCheck = await query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'Cases'
-      )
-    `);
-    console.log('✅ Cases table exists:', tableCheck.rows[0].exists);
-    
-    // Получим количество записей в таблице
-    const countResult = await query('SELECT COUNT(*) as total_count FROM "Cases"');
-    console.log('📊 Total cases in database:', countResult.rows[0].total_count);
-    
     let sql = `
       SELECT 
-        "Cases".*, 
-        "Users".email as userEmail 
-      FROM "Cases" 
-      LEFT JOIN "Users" ON "Cases".userId = "Users".id
+        c.*, 
+        u.email as "userEmail" 
+      FROM "Cases" c 
+      LEFT JOIN "Users" u ON c."userId" = u.id
     `;
     const params = [];
     
     if (userId) {
-      sql += ' WHERE "Cases".userId = $1';
+      sql += ' WHERE c."userId" = $1';
       params.push(userId);
       console.log(`🔍 Filtering by userId: ${userId}`);
     }
     
-    sql += ' ORDER BY "Cases"."createdAt" DESC';
+    sql += ' ORDER BY c."createdAt" DESC';
     
     console.log('📝 Final SQL query:', sql);
     console.log('📝 SQL params:', params);
     
     const result = await query(sql, params);
     console.log('📊 Database returned rows:', result.rows.length);
-    
-    // Подробно логируем каждую запись
-    result.rows.forEach((row, index) => {
-      console.log(`📄 Row ${index + 1}:`, {
-        id: row.id,
-        title: row.title,
-        userId: row.userId,
-        status: row.status,
-        createdAt: row.createdat || row.createdAt
-      });
-    });
     
     // Обработка данных для фронтенда
     const processedRows = result.rows.map(row => {
@@ -389,12 +360,14 @@ app.get('/api/cases', async (req, res) => {
         id: row.id,
         title: row.title || '',
         description: row.description || '',
+        theme: row.theme || '',
         status: row.status || 'open',
-        userId: row.userid || row.userId,
-        userEmail: row.useremail || row.userEmail,
+        userId: row.userId,
+        userEmail: row.userEmail,
+        cover: row.cover,
         files: files,
-        createdAt: row.createdat || row.createdAt || new Date().toISOString(),
-        updatedAt: row.updatedat || row.updatedAt || new Date().toISOString()
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
       };
     });
     
@@ -403,15 +376,16 @@ app.get('/api/cases', async (req, res) => {
     
   } catch (err) {
     console.error('❌ Ошибка получения кейсов:', err);
+    console.error('❌ Error details:', err.message);
     
     // Fallback - попробуем получить базовые данные
     try {
       console.log('🔄 Fallback: trying basic query...');
-      let fallbackSql = 'SELECT id, title, status FROM "Cases"';
+      let fallbackSql = 'SELECT id, title, status, cover FROM "Cases"';
       const fallbackParams = [];
       
       if (userId) {
-        fallbackSql += ' WHERE userId = $1';
+        fallbackSql += ' WHERE "userId" = $1';
         fallbackParams.push(userId);
       }
       
@@ -422,9 +396,10 @@ app.get('/api/cases', async (req, res) => {
         id: row.id,
         title: row.title || '',
         status: row.status || 'open',
-        userId: row.userid || null,
+        userId: row.userId,
         userEmail: null,
         files: [],
+        cover: row.cover,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }));
@@ -441,7 +416,7 @@ app.get('/api/cases', async (req, res) => {
   }
 });
 
-// Детали кейса - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// Детали кейса - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/cases/:id', async (req, res) => {
   const id = req.params.id;
   console.log('🔍 Getting case details for id:', id);
@@ -450,9 +425,9 @@ app.get('/api/cases/:id', async (req, res) => {
     const result = await query(
       `SELECT 
         c.*, 
-        u.email as userEmail 
+        u.email as "userEmail" 
       FROM "Cases" c 
-      LEFT JOIN "Users" u ON c.userId = u.id 
+      LEFT JOIN "Users" u ON c."userId" = u.id 
       WHERE c.id = $1`,
       [id]
     );
@@ -463,12 +438,7 @@ app.get('/api/cases/:id', async (req, res) => {
     }
     
     const row = result.rows[0];
-    console.log('📄 Case data:', {
-      id: row.id,
-      title: row.title,
-      userId: row.userid,
-      hasFiles: !!row.files
-    });
+    console.log('📄 Raw case data:', row);
     
     // Обработка files
     let files = [];
@@ -490,15 +460,15 @@ app.get('/api/cases/:id', async (req, res) => {
       description: row.description || '',
       theme: row.theme || '',
       status: row.status || 'open',
-      userId: row.userid || row.userId,
-      userEmail: row.useremail || row.userEmail,
+      userId: row.userId,
+      userEmail: row.userEmail,
       cover: row.cover,
       files: files,
-      createdAt: row.createdat || row.createdAt,
-      updatedAt: row.updatedat || row.updatedAt
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt
     };
     
-    console.log('✅ Sending case data for id:', id);
+    console.log('✅ Sending case data for id:', id, caseData);
     res.json(caseData);
     
   } catch (err) {
@@ -538,7 +508,7 @@ app.put('/api/cases/:id/accept', async (req, res) => {
       const executorEmail = userResult.rows[0] ? userResult.rows[0].email : null;
       
       await client.query(
-        `INSERT INTO "ProcessedCases" (caseId, userId, title, theme, description, cover, files, status, executorId, executorEmail)
+        `INSERT INTO "ProcessedCases" ("caseId", "userId", title, theme, description, cover, files, status, "executorId", "executorEmail")
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [caseRow.id, caseRow.userId, caseRow.title, caseRow.theme, caseRow.description, caseRow.cover, 
          caseRow.files, 'in_process', executorId, executorEmail]
@@ -561,32 +531,65 @@ app.put('/api/cases/:id/accept', async (req, res) => {
   }
 });
 
-// Получение принятых кейсов
+// Получение принятых кейсов - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/processed-cases', async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT "ProcessedCases".*, "Users".email AS userEmail FROM "ProcessedCases" LEFT JOIN "Users" ON "ProcessedCases".userId = "Users".id`
-    );
-    
-    const rows = result.rows.map(row => ({
-      ...row,
-      files: row.files ? JSON.parse(row.files) : []
-    }));
-    
-    res.json(rows);
-  } catch (err) {
-    console.error('Ошибка получения принятых кейсов:', err);
-    res.status(500).json({ error: 'Ошибка при получении принятых кейсов' });
-  }
-});
-
-// Детали принятого кейса
-app.get('/api/processed-cases/:id', async (req, res) => {
-  const id = req.params.id;
+  console.log('🔍 /api/processed-cases called');
   
   try {
     const result = await query(
-      `SELECT "ProcessedCases".*, "Users".email AS userEmail FROM "ProcessedCases" LEFT JOIN "Users" ON "ProcessedCases".userId = "Users".id WHERE "ProcessedCases".id = $1`,
+      `SELECT 
+        pc.*, 
+        u.email as "userEmail" 
+      FROM "ProcessedCases" pc 
+      LEFT JOIN "Users" u ON pc."userId" = u.id`
+    );
+    
+    console.log('📊 Processed cases found:', result.rows.length);
+    
+    const rows = result.rows.map(row => {
+      let files = [];
+      if (row.files) {
+        if (typeof row.files === 'string') {
+          try {
+            files = JSON.parse(row.files);
+          } catch (e) {
+            console.warn('⚠️ Could not parse files for processed case', row.id);
+          }
+        } else if (Array.isArray(row.files)) {
+          files = row.files;
+        }
+      }
+      
+      return {
+        ...row,
+        files: files
+      };
+    });
+    
+    res.json(rows);
+  } catch (err) {
+    console.error('❌ Ошибка получения принятых кейсов:', err);
+    console.error('❌ Error details:', err.message);
+    res.status(500).json({ 
+      error: 'Ошибка при получении принятых кейсов',
+      details: err.message
+    });
+  }
+});
+
+// Детали принятого кейса - ИСПРАВЛЕННАЯ ВЕРСИЯ
+app.get('/api/processed-cases/:id', async (req, res) => {
+  const id = req.params.id;
+  console.log('🔍 Getting processed case details for id:', id);
+  
+  try {
+    const result = await query(
+      `SELECT 
+        pc.*, 
+        u.email as "userEmail" 
+      FROM "ProcessedCases" pc 
+      LEFT JOIN "Users" u ON pc."userId" = u.id 
+      WHERE pc.id = $1`,
       [id]
     );
     
@@ -595,11 +598,34 @@ app.get('/api/processed-cases/:id', async (req, res) => {
     }
     
     const row = result.rows[0];
-    row.files = row.files ? JSON.parse(row.files) : [];
-    res.json(row);
+    
+    let files = [];
+    if (row.files) {
+      if (typeof row.files === 'string') {
+        try {
+          files = JSON.parse(row.files);
+        } catch (e) {
+          console.warn('⚠️ Could not parse files for processed case', row.id);
+        }
+      } else if (Array.isArray(row.files)) {
+        files = row.files;
+      }
+    }
+    
+    const processedCaseData = {
+      ...row,
+      files: files
+    };
+    
+    console.log('✅ Sending processed case data for id:', id);
+    res.json(processedCaseData);
   } catch (err) {
     console.error('Ошибка получения принятого кейса:', err);
-    res.status(500).json({ error: 'Ошибка при получении принятого кейса' });
+    console.error('❌ Error details:', err.message);
+    res.status(500).json({ 
+      error: 'Ошибка при получении принятого кейса',
+      details: err.message
+    });
   }
 });
 
@@ -650,7 +676,7 @@ app.put('/api/processed-cases/:id/complete', async (req, res) => {
       await client.query('BEGIN');
       
       const pCaseResult = await client.query(
-        'SELECT * FROM "ProcessedCases" WHERE id = $1 AND executorId = $2',
+        'SELECT * FROM "ProcessedCases" WHERE id = $1 AND "executorId" = $2',
         [processedCaseId, userId]
       );
       
@@ -665,7 +691,7 @@ app.put('/api/processed-cases/:id/complete', async (req, res) => {
       const executorEmail = userResult.rows[0] ? userResult.rows[0].email : null;
       
       const projectResult = await client.query(
-        `INSERT INTO "Projects" (caseId, userId, title, theme, description, cover, files, status, executorEmail)
+        `INSERT INTO "Projects" ("caseId", "userId", title, theme, description, cover, files, status, "executorEmail")
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
         [pCase.caseId, pCase.userId, title || pCase.title, theme || pCase.theme, 
          description || pCase.description, cover || pCase.cover, 
@@ -689,26 +715,17 @@ app.put('/api/processed-cases/:id/complete', async (req, res) => {
   }
 });
 
-// Получение проектов - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// Получение проектов - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/projects', async (req, res) => {
   console.log('🔍 /api/projects called with query:', req.query);
   const userId = req.query.userId;
   const userEmail = req.query.userEmail;
   
   try {
-    // Сначала проверим структуру таблицы Projects
-    const structure = await query(`
-      SELECT column_name, data_type 
-      FROM information_schema.columns 
-      WHERE table_name = 'Projects' 
-      ORDER BY ordinal_position
-    `);
-    console.log('📋 Projects table structure:', structure.rows);
-    
     let sql = `
       SELECT 
         p.*,
-        u.email as userEmail
+        u.email as "userEmail"
       FROM "Projects" p
       LEFT JOIN "Users" u ON p."userId" = u.id
     `;
@@ -748,18 +765,18 @@ app.get('/api/projects', async (req, res) => {
       
       return {
         id: row.id,
-        caseId: row.caseid || row.caseId,
-        userId: row.userid || row.userId,
+        caseId: row.caseId,
+        userId: row.userId,
         title: row.title || '',
         theme: row.theme || '',
         description: row.description || '',
         cover: row.cover,
         files: files,
         status: row.status || 'closed',
-        executorEmail: row.executoremail || row.executorEmail,
-        userEmail: row.useremail || row.userEmail,
-        createdAt: row.createdat || row.createdAt,
-        updatedAt: row.updatedat || row.updatedAt
+        executorEmail: row.executorEmail,
+        userEmail: row.userEmail,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
       };
     });
     
@@ -793,7 +810,7 @@ app.get('/api/projects', async (req, res) => {
   }
 });
 
-// Получение деталей проекта - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// Получение деталей проекта - ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/projects/:id', async (req, res) => {
   const id = req.params.id;
   console.log('🔍 Getting project details for id:', id);
@@ -802,7 +819,7 @@ app.get('/api/projects/:id', async (req, res) => {
     const result = await query(
       `SELECT 
         p.*,
-        u.email as userEmail 
+        u.email as "userEmail" 
       FROM "Projects" p 
       LEFT JOIN "Users" u ON p."userId" = u.id 
       WHERE p.id = $1`,
@@ -831,18 +848,18 @@ app.get('/api/projects/:id', async (req, res) => {
     
     const projectData = {
       id: row.id,
-      caseId: row.caseid || row.caseId,
-      userId: row.userid || row.userId,
+      caseId: row.caseId,
+      userId: row.userId,
       title: row.title || '',
       theme: row.theme || '',
       description: row.description || '',
       cover: row.cover,
       files: files,
       status: row.status || 'closed',
-      executorEmail: row.executoremail || row.executorEmail,
-      userEmail: row.useremail || row.userEmail,
-      createdAt: row.createdat || row.createdAt,
-      updatedAt: row.updatedat || row.updatedAt
+      executorEmail: row.executorEmail,
+      userEmail: row.userEmail,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt
     };
     
     console.log('✅ Sending project data for id:', id);
@@ -857,24 +874,34 @@ app.get('/api/projects/:id', async (req, res) => {
   }
 });
 
-// Получить отзывы пользователя
+// Получить отзывы пользователя - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/reviews', async (req, res) => {
   const userId = req.query.userId;
+  console.log('🔍 /api/reviews called with userId:', userId);
   
   try {
     let sql = 'SELECT * FROM "Reviews"';
     const params = [];
     
     if (userId) {
-      sql += ' WHERE userId = $1';
+      sql += ' WHERE "userId" = $1';
       params.push(userId);
     }
     
+    console.log('📝 Reviews SQL:', sql);
+    console.log('📝 Reviews params:', params);
+    
     const result = await query(sql, params);
+    console.log('📊 Reviews found:', result.rows.length);
+    
     res.json(result.rows);
   } catch (err) {
-    console.error('Ошибка получения отзывов:', err);
-    res.status(500).json({ error: 'Ошибка при получении отзывов' });
+    console.error('❌ Ошибка получения отзывов:', err);
+    console.error('❌ Error details:', err.message);
+    res.status(500).json({ 
+      error: 'Ошибка при получении отзывов',
+      details: err.message
+    });
   }
 });
 
@@ -888,11 +915,11 @@ app.post('/api/reviews', async (req, res) => {
   
   try {
     const result = await query(
-      'INSERT INTO "Reviews" (userId, reviewerId, reviewerName, reviewerPhoto, text, rating) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      'INSERT INTO "Reviews" ("userId", "reviewerId", "reviewerName", "reviewerPhoto", text, rating) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [userId, reviewerId, reviewerName, reviewerPhoto, text, rating]
     );
     
-    const reviewsResult = await query('SELECT * FROM "Reviews" WHERE userId = $1', [userId]);
+    const reviewsResult = await query('SELECT * FROM "Reviews" WHERE "userId" = $1', [userId]);
     res.json(reviewsResult.rows);
     
   } catch (err) {
@@ -1006,6 +1033,39 @@ app.get('/api/debug/projects-structure', async (req, res) => {
   }
 });
 
+// Полная диагностика всех таблиц
+app.get('/api/debug/all-tables', async (req, res) => {
+  try {
+    const tables = ['Users', 'Cases', 'ProcessedCases', 'Projects', 'Reviews'];
+    const results = {};
+    
+    for (const table of tables) {
+      try {
+        const structure = await query(`
+          SELECT column_name, data_type, is_nullable 
+          FROM information_schema.columns 
+          WHERE table_name = $1 
+          ORDER BY ordinal_position
+        `, [table]);
+        
+        const sample = await query(`SELECT * FROM "${table}" LIMIT 2`);
+        
+        results[table] = {
+          structure: structure.rows,
+          sample: sample.rows
+        };
+      } catch (err) {
+        results[table] = { error: err.message };
+      }
+    }
+    
+    res.json(results);
+  } catch (err) {
+    console.error('Full diagnostics error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Catch-all handler для React Router
 app.get('*', (req, res) => {
   console.log(`🎯 Catch-all handler: ${req.method} ${req.path}`);
@@ -1081,7 +1141,7 @@ app.get('/api/debug/cases-detailed', async (req, res) => {
       joinResult = await query(`
         SELECT "Cases".*, "Users".email 
         FROM "Cases" 
-        LEFT JOIN "Users" ON "Cases".userId = "Users".id 
+        LEFT JOIN "Users" ON "Cases"."userId" = "Users".id 
         LIMIT 2
       `);
       console.log('✅ JOIN with Users worked');
