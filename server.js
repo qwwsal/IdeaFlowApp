@@ -98,7 +98,7 @@ app.post('/api/test-login', (req, res) => {
 // ✅ Проверка подключения к БД
 app.get('/api/debug/db', async (req, res) => {
   try {
-    const result = await query('SELECT COUNT(*) as user_count FROM Users');
+    const result = await query('SELECT COUNT(*) as user_count FROM "Users"');
     res.json({ 
       status: 'OK',
       userCount: result.rows[0].user_count,
@@ -125,12 +125,12 @@ app.get('/api/debug/cases-structure', async (req, res) => {
         column_default
       FROM information_schema.columns 
       WHERE table_schema = 'public' 
-      AND table_name = 'cases'
+      AND table_name = 'Cases'
       ORDER BY ordinal_position
     `);
     
     // Получим несколько примеров записей
-    const samples = await query('SELECT * FROM Cases LIMIT 3');
+    const samples = await query('SELECT * FROM "Cases" LIMIT 3');
     
     res.json({
       tableStructure: structure.rows,
@@ -155,7 +155,7 @@ const getCurrentUser = async (req, res, next) => {
   }
   
   try {
-    const result = await query('SELECT id, email, firstName, lastName, photo, description FROM Users WHERE id = $1', [userId]);
+    const result = await query('SELECT id, email, "firstName", "lastName", photo, description FROM "Users" WHERE id = $1', [userId]);
     if (!result.rows[0]) {
       return res.status(401).json({ error: 'Пользователь не найден' });
     }
@@ -184,7 +184,7 @@ app.post('/api/register', async (req, res) => {
   try {
     const hash = await bcrypt.hash(password, 10);
     const result = await query(
-      'INSERT INTO Users (email, password) VALUES ($1, $2) RETURNING id, email',
+      'INSERT INTO "Users" (email, password) VALUES ($1, $2) RETURNING id, email',
       [email, hash]
     );
     res.json(result.rows[0]);
@@ -204,7 +204,7 @@ app.post('/api/login', async (req, res) => {
   console.log('🔐 Login attempt for email:', email);
   
   try {
-    const result = await query('SELECT * FROM Users WHERE email = $1', [email]);
+    const result = await query('SELECT * FROM "Users" WHERE email = $1', [email]);
     const user = result.rows[0];
     
     if (!user) {
@@ -246,7 +246,7 @@ app.get('/api/profile/:id', async (req, res) => {
   
   try {
     const result = await query(
-      'SELECT id, email, firstName, lastName, photo, description FROM Users WHERE id = $1',
+      'SELECT id, email, "firstName", "lastName", photo, description FROM "Users" WHERE id = $1',
       [id]
     );
     
@@ -267,7 +267,7 @@ app.put('/api/profile/:id', async (req, res) => {
   
   try {
     const result = await query(
-      'UPDATE Users SET firstName = $1, lastName = $2, photo = $3, description = $4 WHERE id = $5 RETURNING *',
+      'UPDATE "Users" SET "firstName" = $1, "lastName" = $2, photo = $3, description = $4 WHERE id = $5 RETURNING *',
       [firstName, lastName, photo, description, id]
     );
     
@@ -296,7 +296,7 @@ app.post('/api/cases', uploadCaseFiles, async (req, res) => {
       filesPaths = req.files.files.map(file => `/uploads/${file.filename}`);
 
     const result = await query(
-      `INSERT INTO Cases (userId, title, theme, description, cover, files, status) 
+      `INSERT INTO "Cases" (userId, title, theme, description, cover, files, status) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [userId, title, theme || '', description || '', coverPath, JSON.stringify(filesPaths), 'open']
     );
@@ -325,31 +325,31 @@ app.get('/api/cases', async (req, res) => {
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public' 
-        AND table_name = 'cases'
+        AND table_name = 'Cases'
       )
     `);
     console.log('✅ Cases table exists:', tableCheck.rows[0].exists);
     
     // Получим количество записей в таблице
-    const countResult = await query('SELECT COUNT(*) as total_count FROM Cases');
+    const countResult = await query('SELECT COUNT(*) as total_count FROM "Cases"');
     console.log('📊 Total cases in database:', countResult.rows[0].total_count);
     
     let sql = `
       SELECT 
-        Cases.*, 
-        Users.email as userEmail 
-      FROM Cases 
-      LEFT JOIN Users ON Cases.userId = Users.id
+        "Cases".*, 
+        "Users".email as userEmail 
+      FROM "Cases" 
+      LEFT JOIN "Users" ON "Cases".userId = "Users".id
     `;
     const params = [];
     
     if (userId) {
-      sql += ' WHERE Cases.userId = $1';
+      sql += ' WHERE "Cases".userId = $1';
       params.push(userId);
       console.log(`🔍 Filtering by userId: ${userId}`);
     }
     
-    sql += ' ORDER BY Cases.createdAt DESC';
+    sql += ' ORDER BY "Cases"."createdAt" DESC';
     
     console.log('📝 Final SQL query:', sql);
     console.log('📝 SQL params:', params);
@@ -421,7 +421,7 @@ app.get('/api/cases/:id', async (req, res) => {
   
   try {
     const result = await query(
-      `SELECT Cases.*, Users.email as userEmail FROM Cases LEFT JOIN Users ON Cases.userId = Users.id WHERE Cases.id = $1`,
+      `SELECT "Cases".*, "Users".email as userEmail FROM "Cases" LEFT JOIN "Users" ON "Cases".userId = "Users".id WHERE "Cases".id = $1`,
       [id]
     );
     
@@ -453,7 +453,7 @@ app.put('/api/cases/:id/accept', async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      const caseResult = await client.query('SELECT * FROM Cases WHERE id = $1', [caseId]);
+      const caseResult = await client.query('SELECT * FROM "Cases" WHERE id = $1', [caseId]);
       if (!caseResult.rows[0]) {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Кейс не найден' });
@@ -461,17 +461,17 @@ app.put('/api/cases/:id/accept', async (req, res) => {
       
       const caseRow = caseResult.rows[0];
       
-      const userResult = await client.query('SELECT email FROM Users WHERE id = $1', [executorId]);
+      const userResult = await client.query('SELECT email FROM "Users" WHERE id = $1', [executorId]);
       const executorEmail = userResult.rows[0] ? userResult.rows[0].email : null;
       
       await client.query(
-        `INSERT INTO ProcessedCases (caseId, userId, title, theme, description, cover, files, status, executorId, executorEmail)
+        `INSERT INTO "ProcessedCases" (caseId, userId, title, theme, description, cover, files, status, executorId, executorEmail)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [caseRow.id, caseRow.userId, caseRow.title, caseRow.theme, caseRow.description, caseRow.cover, 
          caseRow.files, 'in_process', executorId, executorEmail]
       );
       
-      await client.query('UPDATE Cases SET status = $1 WHERE id = $2', ['accepted', caseId]);
+      await client.query('UPDATE "Cases" SET status = $1 WHERE id = $2', ['accepted', caseId]);
       
       await client.query('COMMIT');
       res.json({ message: 'Кейс принят', caseId });
@@ -492,7 +492,7 @@ app.put('/api/cases/:id/accept', async (req, res) => {
 app.get('/api/processed-cases', async (req, res) => {
   try {
     const result = await query(
-      `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id`
+      `SELECT "ProcessedCases".*, "Users".email AS userEmail FROM "ProcessedCases" LEFT JOIN "Users" ON "ProcessedCases".userId = "Users".id`
     );
     
     const rows = result.rows.map(row => ({
@@ -513,7 +513,7 @@ app.get('/api/processed-cases/:id', async (req, res) => {
   
   try {
     const result = await query(
-      `SELECT ProcessedCases.*, Users.email AS userEmail FROM ProcessedCases LEFT JOIN Users ON ProcessedCases.userId = Users.id WHERE ProcessedCases.id = $1`,
+      `SELECT "ProcessedCases".*, "Users".email AS userEmail FROM "ProcessedCases" LEFT JOIN "Users" ON "ProcessedCases".userId = "Users".id WHERE "ProcessedCases".id = $1`,
       [id]
     );
     
@@ -546,7 +546,7 @@ app.post('/api/processed-cases/:id/upload-files', uploadExtraFiles, async (req, 
   }
   
   try {
-    const result = await query('SELECT files FROM ProcessedCases WHERE id = $1', [id]);
+    const result = await query('SELECT files FROM "ProcessedCases" WHERE id = $1', [id]);
     
     if (!result.rows[0]) {
       return res.status(404).json({ error: 'Кейс не найден' });
@@ -556,7 +556,7 @@ app.post('/api/processed-cases/:id/upload-files', uploadExtraFiles, async (req, 
     const newFiles = req.files.map(file => `/uploads/${file.filename}`);
     const updatedFiles = existingFiles.concat(newFiles);
     
-    await query('UPDATE ProcessedCases SET files = $1 WHERE id = $2', [JSON.stringify(updatedFiles), id]);
+    await query('UPDATE "ProcessedCases" SET files = $1 WHERE id = $2', [JSON.stringify(updatedFiles), id]);
     res.json({ message: 'Файлы добавлены', files: updatedFiles });
     
   } catch (err) {
@@ -577,7 +577,7 @@ app.put('/api/processed-cases/:id/complete', async (req, res) => {
       await client.query('BEGIN');
       
       const pCaseResult = await client.query(
-        'SELECT * FROM ProcessedCases WHERE id = $1 AND executorId = $2',
+        'SELECT * FROM "ProcessedCases" WHERE id = $1 AND executorId = $2',
         [processedCaseId, userId]
       );
       
@@ -588,18 +588,18 @@ app.put('/api/processed-cases/:id/complete', async (req, res) => {
       
       const pCase = pCaseResult.rows[0];
       
-      const userResult = await client.query('SELECT email FROM Users WHERE id = $1', [userId]);
+      const userResult = await client.query('SELECT email FROM "Users" WHERE id = $1', [userId]);
       const executorEmail = userResult.rows[0] ? userResult.rows[0].email : null;
       
       const projectResult = await client.query(
-        `INSERT INTO Projects (caseId, userId, title, theme, description, cover, files, status, executorEmail)
+        `INSERT INTO "Projects" (caseId, userId, title, theme, description, cover, files, status, executorEmail)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
         [pCase.caseId, pCase.userId, title || pCase.title, theme || pCase.theme, 
          description || pCase.description, cover || pCase.cover, 
          files ? JSON.stringify(files) : pCase.files, 'closed', executorEmail]
       );
       
-      await client.query('DELETE FROM ProcessedCases WHERE id = $1', [processedCaseId]);
+      await client.query('DELETE FROM "ProcessedCases" WHERE id = $1', [processedCaseId]);
       
       await client.query('COMMIT');
       res.json({ message: 'Проект успешно создан', projectId: projectResult.rows[0].id });
@@ -624,22 +624,22 @@ app.get('/api/projects', async (req, res) => {
   try {
     let sql = `
       SELECT 
-        Projects.*, 
-        Users.email as userEmail,
+        "Projects".*, 
+        "Users".email as userEmail,
         Executors.id as executorId,
         Executors.email as executorUserEmail
-      FROM Projects 
-      LEFT JOIN Users ON Projects.userId = Users.id 
-      LEFT JOIN Users as Executors ON Projects.executorEmail = Executors.email
+      FROM "Projects" 
+      LEFT JOIN "Users" ON "Projects".userId = "Users".id 
+      LEFT JOIN "Users" as Executors ON "Projects".executorEmail = Executors.email
     `;
     const params = [];
     let paramCount = 0;
     
     if (userId) {
-      sql += ` WHERE Projects.userId = $${++paramCount}`;
+      sql += ` WHERE "Projects".userId = $${++paramCount}`;
       params.push(userId);
     } else if (userEmail) {
-      sql += ` WHERE Projects.executorEmail = $${++paramCount} AND Projects.status = 'closed'`;
+      sql += ` WHERE "Projects".executorEmail = $${++paramCount} AND "Projects".status = 'closed'`;
       params.push(userEmail);
     }
     
@@ -662,7 +662,7 @@ app.get('/api/projects/:id', async (req, res) => {
   
   try {
     const result = await query(
-      `SELECT Projects.*, Users.email as userEmail FROM Projects LEFT JOIN Users ON Projects.userId = Users.id WHERE Projects.id = $1`,
+      `SELECT "Projects".*, "Users".email as userEmail FROM "Projects" LEFT JOIN "Users" ON "Projects".userId = "Users".id WHERE "Projects".id = $1`,
       [id]
     );
     
@@ -684,7 +684,7 @@ app.get('/api/reviews', async (req, res) => {
   const userId = req.query.userId;
   
   try {
-    let sql = 'SELECT * FROM Reviews';
+    let sql = 'SELECT * FROM "Reviews"';
     const params = [];
     
     if (userId) {
@@ -710,11 +710,11 @@ app.post('/api/reviews', async (req, res) => {
   
   try {
     const result = await query(
-      'INSERT INTO Reviews (userId, reviewerId, reviewerName, reviewerPhoto, text, rating) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      'INSERT INTO "Reviews" (userId, reviewerId, reviewerName, reviewerPhoto, text, rating) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [userId, reviewerId, reviewerName, reviewerPhoto, text, rating]
     );
     
-    const reviewsResult = await query('SELECT * FROM Reviews WHERE userId = $1', [userId]);
+    const reviewsResult = await query('SELECT * FROM "Reviews" WHERE userId = $1', [userId]);
     res.json(reviewsResult.rows);
     
   } catch (err) {
@@ -723,69 +723,6 @@ app.post('/api/reviews', async (req, res) => {
   }
 });
 
-// Catch-all handler для React Router
-app.get('*', (req, res) => {
-  console.log(`🎯 Catch-all handler: ${req.method} ${req.path}`);
-  
-  // Пропускаем API запросы и статические файлы
-  if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
-    console.log(`❌ API route not found: ${req.path}`);
-    return res.status(404).json({ 
-      error: 'API route not found', 
-      path: req.path,
-      message: 'Check server logs for available routes'
-    });
-  }
-  
-  // Для всех остальных запросов отдаем React приложение
-  const indexPath = path.join(__dirname, 'build', 'index.html');
-  if (fs.existsSync(indexPath)) {
-    console.log(`✅ Serving React app for: ${req.path}`);
-    res.sendFile(indexPath);
-  } else {
-    console.log(`❌ Build folder not found for: ${req.path}`);
-    res.status(500).json({ 
-      error: 'Frontend not built',
-      message: 'React build folder not found'
-    });
-  }
-});
-
-
-// Диагностика подключения к БД
-app.get('/api/debug/connection', async (req, res) => {
-  try {
-    // Получим информацию о подключении
-    const dbInfo = await query(`
-      SELECT 
-        current_database() as database,
-        current_user as user,
-        inet_server_addr() as host,
-        inet_server_port() as port,
-        version() as version
-    `);
-    
-    // Проверим все таблицы
-    const tables = await query(`
-      SELECT table_name, table_type 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      ORDER BY table_name
-    `);
-    
-    // Количество записей в каждой таблице
-    const tableCounts = {};
-    for (let table of tables.rows) {
-      const countResult = await query(`SELECT COUNT(*) as count FROM "${table.table_name}"`);
-      tableCounts[table.table_name] = countResult.rows[0].count;
-    }
-    
-    res.json({
-      connection: dbInfo.rows[0],
-      tables: tables.rows,
-      tableCounts: tableCounts
-    });
-    
 // Проверка всех таблиц и данных в БД
 app.get('/api/debug/tables', async (req, res) => {
   try {
@@ -828,9 +765,71 @@ app.get('/api/debug/tables', async (req, res) => {
   }
 });
 
+// Диагностика подключения к БД
+app.get('/api/debug/connection', async (req, res) => {
+  try {
+    // Получим информацию о подключении
+    const dbInfo = await query(`
+      SELECT 
+        current_database() as database,
+        current_user as user,
+        inet_server_addr() as host,
+        inet_server_port() as port,
+        version() as version
+    `);
+    
+    // Проверим все таблицы
+    const tables = await query(`
+      SELECT table_name, table_type 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+    
+    // Количество записей в каждой таблице
+    const tableCounts = {};
+    for (let table of tables.rows) {
+      const countResult = await query(`SELECT COUNT(*) as count FROM "${table.table_name}"`);
+      tableCounts[table.table_name] = countResult.rows[0].count;
+    }
+    
+    res.json({
+      connection: dbInfo.rows[0],
+      tables: tables.rows,
+      tableCounts: tableCounts
+    });
+    
   } catch (err) {
     console.error('Connection debug error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Catch-all handler для React Router
+app.get('*', (req, res) => {
+  console.log(`🎯 Catch-all handler: ${req.method} ${req.path}`);
+  
+  // Пропускаем API запросы и статические файлы
+  if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+    console.log(`❌ API route not found: ${req.path}`);
+    return res.status(404).json({ 
+      error: 'API route not found', 
+      path: req.path,
+      message: 'Check server logs for available routes'
+    });
+  }
+  
+  // Для всех остальных запросов отдаем React приложение
+  const indexPath = path.join(__dirname, 'build', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    console.log(`✅ Serving React app for: ${req.path}`);
+    res.sendFile(indexPath);
+  } else {
+    console.log(`❌ Build folder not found for: ${req.path}`);
+    res.status(500).json({ 
+      error: 'Frontend not built',
+      message: 'React build folder not found'
+    });
   }
 });
 
