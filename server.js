@@ -554,6 +554,15 @@ async function startServer() {
     await initializeDatabase();
     console.log('База данных инициализирована');
     
+// Обслуживание статических файлов React в production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'build')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
+}
+
     app.listen(PORT, () => {
       console.log(`Server started on port ${PORT}`);
       console.log(`Frontend available at: https://ideaflowapp-production.up.railway.app`);
