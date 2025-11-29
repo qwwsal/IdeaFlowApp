@@ -209,7 +209,7 @@ export default function CasePage() {
                       <span 
                         className={styles.profileLink}
                         onClick={(e) => handleProfileClick(e, caseItem.userId)}
-                        style={{color: '#007bff', cursor: 'pointer', textDecoration: 'underline'}}
+                        style={{color: '#FBBB13', cursor: 'pointer', textDecoration: 'none'}}
                       >
                         {caseItem.userEmail || 'Не указан'}
                       </span>
@@ -217,7 +217,7 @@ export default function CasePage() {
                       caseItem.userEmail || 'Не указан'
                     )}
                   </div>
-                  <div className={styles.projectTitle}>Название: {caseItem.title}</div>
+                  <div className={styles.projectTitle}>{caseItem.title}</div>
                   <div className={styles.projectTopic}>Тема: {caseItem.theme || 'Не указана'}</div>
                   {caseItem.executorId && (
                     <div className={styles.projectPerformer}>
@@ -226,7 +226,7 @@ export default function CasePage() {
                         <span 
                           className={styles.profileLink}
                           onClick={(e) => handleProfileClick(e, caseItem.executorId)}
-                          style={{color: '#007bff', cursor: 'pointer', textDecoration: 'underline'}}
+                          style={{color: '#FBBB13', cursor: 'pointer', textDecoration: 'underline'}}
                         >
                           {caseItem.executorEmail || 'Не указан'}
                         </span>

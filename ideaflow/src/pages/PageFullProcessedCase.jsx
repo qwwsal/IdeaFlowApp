@@ -105,7 +105,7 @@ export default function PageFullProcessedCase() {
         )}
         
         <div className={styles.infoSection}>
-          <p><b>Заказчик:</b> 
+          <p><b>Заказчик: </b> 
             {caseData.userId ? (
               <Link to={`/profileview/${caseData.userId}`}>
                 {caseData.userEmail}
@@ -115,7 +115,7 @@ export default function PageFullProcessedCase() {
             )}
           </p>
 
-          <p><b>Исполнитель:</b> 
+          <p><b>Исполнитель: </b> 
             {caseData.executorId ? (
               <Link to={`/profileview/${caseData.executorId}`}>
                 {caseData.executorEmail || 'Вы'}

@@ -202,7 +202,7 @@ export default function ProjectsPage() {
                       <span 
                         className={styles.profileLink}
                         onClick={(e) => handleProfileClick(e, project.userId)}
-                        style={{color: '#007bff', cursor: 'pointer', textDecoration: 'underline'}}
+                        style={{color: '#FBBB13', cursor: 'pointer', textDecoration: 'none'}}
                       >
                         {project.userEmail || project.executorEmail || 'Не указан'}
                       </span>
@@ -216,7 +216,7 @@ export default function ProjectsPage() {
                       <span 
                         className={styles.profileLink}
                         onClick={(e) => handleProfileClick(e, project.executorId)}
-                        style={{color: '#007bff', cursor: 'pointer', textDecoration: 'underline'}}
+                        style={{color: '#FBBB13', cursor: 'pointer', textDecoration: 'none'}}
                       >
                         {project.executorEmail || 'Не указан'}
                       </span>

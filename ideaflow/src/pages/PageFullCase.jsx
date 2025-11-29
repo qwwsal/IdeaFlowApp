@@ -134,7 +134,7 @@ export default function PageFullCase() {
         {caseData.cover && <img src={`http://localhost:3001${caseData.cover}`} alt="Обложка" className={styles.cover} />}
         
         <div className={styles.infoSection}>
-          <p><b>Заказчик:</b> 
+          <p><b>Заказчик: </b> 
             {caseData.userId ? (
               <Link to={`/profileview/${caseData.userId}`}>
                 {caseData.userEmail}
@@ -143,7 +143,6 @@ export default function PageFullCase() {
               caseData.userEmail
             )}
           </p>
-          <p><b>Исполнитель:</b> {caseData.executorEmail || 'Не назначен'}</p>
           <p><b>Тема:</b> {caseData.theme}</p>
           <p><b>Задача проекта:</b> {caseData.description}</p>
 

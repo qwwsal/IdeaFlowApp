@@ -103,7 +103,7 @@ export default function PageFullProject() {
         )}
         
         <div className={styles.infoSection}>
-          <p><b>Заказчик:</b> 
+          <p><b>Заказчик: </b> 
             {projectData.userId ? (
               <Link to={`/profileview/${projectData.userId}`}>
                 {projectData.userEmail}
