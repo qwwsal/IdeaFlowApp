@@ -81,7 +81,6 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-
 // Парсинг JSON тела
 app.use(express.json());
 
@@ -111,6 +110,39 @@ app.get('/api/debug/db', async (req, res) => {
       error: 'Database error',
       message: err.message 
     });
+  }
+});
+
+// Диагностика структуры таблицы Cases
+app.get('/api/debug/cases-structure', async (req, res) => {
+  try {
+    // Получим структуру таблицы Cases
+    const structure = await query(`
+      SELECT 
+        column_name,
+        data_type,
+        is_nullable,
+        column_default
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      AND table_name = 'cases'
+      ORDER BY ordinal_position
+    `);
+    
+    // Получим несколько примеров записей
+    const samples = await query('SELECT * FROM Cases LIMIT 3');
+    
+    res.json({
+      tableStructure: structure.rows,
+      sampleRecords: samples.rows.map(row => ({
+        ...row,
+        files: row.files ? JSON.parse(row.files) : []
+      }))
+    });
+    
+  } catch (err) {
+    console.error('Error getting table structure:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -276,29 +308,110 @@ app.post('/api/cases', uploadCaseFiles, async (req, res) => {
   }
 });
 
-// Получение кейсов с фильтрацией
+// Получение кейсов с фильтрацией - ИСПРАВЛЕННАЯ ВЕРСИЯ
 app.get('/api/cases', async (req, res) => {
+  console.log('🔍 /api/cases called with query:', req.query);
+  console.log('🔍 Request headers:', req.headers);
+  
   const userId = req.query.userId;
   
   try {
-    let sql = `SELECT Cases.*, Users.email as userEmail FROM Cases LEFT JOIN Users ON Cases.userId = Users.id`;
+    // Сначала проверим подключение к БД
+    const dbCheck = await query('SELECT NOW() as current_time');
+    console.log('✅ Database connection OK:', dbCheck.rows[0].current_time);
+    
+    // Проверим существование таблицы Cases
+    const tableCheck = await query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'cases'
+      )
+    `);
+    console.log('✅ Cases table exists:', tableCheck.rows[0].exists);
+    
+    // Получим количество записей в таблице
+    const countResult = await query('SELECT COUNT(*) as total_count FROM Cases');
+    console.log('📊 Total cases in database:', countResult.rows[0].total_count);
+    
+    let sql = `
+      SELECT 
+        Cases.*, 
+        Users.email as userEmail 
+      FROM Cases 
+      LEFT JOIN Users ON Cases.userId = Users.id
+    `;
     const params = [];
     
     if (userId) {
       sql += ' WHERE Cases.userId = $1';
       params.push(userId);
+      console.log(`🔍 Filtering by userId: ${userId}`);
     }
     
-    const result = await query(sql, params);
-    const rows = result.rows.map(row => ({
-      ...row,
-      files: row.files ? JSON.parse(row.files) : []
-    }));
+    sql += ' ORDER BY Cases.createdAt DESC';
     
+    console.log('📝 Final SQL query:', sql);
+    console.log('📝 SQL params:', params);
+    
+    const result = await query(sql, params);
+    console.log('📊 Database returned rows:', result.rows.length);
+    
+    // Подробно логируем каждую запись
+    result.rows.forEach((row, index) => {
+      console.log(`📄 Row ${index + 1}:`, {
+        id: row.id,
+        title: row.title,
+        userId: row.userId,
+        status: row.status,
+        createdAt: row.createdat || row.createdAt
+      });
+    });
+    
+    const rows = result.rows.map(row => {
+      // Обрабатываем files - может быть string, array или null
+      let files = [];
+      try {
+        if (row.files) {
+          if (typeof row.files === 'string') {
+            files = JSON.parse(row.files);
+          } else if (Array.isArray(row.files)) {
+            files = row.files;
+          }
+        }
+      } catch (parseError) {
+        console.error('❌ Error parsing files for case', row.id, ':', parseError);
+        files = [];
+      }
+      
+      return {
+        ...row,
+        files: files,
+        // Нормализуем названия полей
+        createdAt: row.createdat || row.createdAt
+      };
+    });
+    
+    console.log('✅ Sending cases:', rows.length);
     res.json(rows);
+    
   } catch (err) {
-    console.error('Ошибка получения кейсов:', err);
-    res.status(500).json({ error: 'Ошибка при получении кейсов' });
+    console.error('❌ Ошибка получения кейсов:', err);
+    console.error('❌ Stack trace:', err.stack);
+    
+    // Более детальная информация об ошибке
+    if (err.code) {
+      console.error('❌ PostgreSQL error code:', err.code);
+    }
+    if (err.position) {
+      console.error('❌ Error position:', err.position);
+    }
+    
+    res.status(500).json({ 
+      error: 'Ошибка при получении кейсов',
+      details: err.message,
+      code: err.code
+    });
   }
 });
 
