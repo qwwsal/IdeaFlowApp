@@ -13,9 +13,9 @@ import PageFullProject from './pages/PageFullProject';
 import ProfileView from './pages/ProfileView';
 import PageFullProcessedCase from './pages/PageFullProcessedCase';
 
-
 function ProtectedRoute({ children }) {
-  const userId = localStorage.getItem('userId');
+  const userId = localStorage.getItem('currentUserId'); // исправлено на currentUserId
+  console.log('🔍 ProtectedRoute check - userId:', userId);
   if (!userId) {
     return <Navigate to="/signin" replace />;
   }
@@ -38,19 +38,21 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/add-case" element={<AddCasePage />} />
 
-      {/* Защищённый маршрут профиля текущего пользователя */}
+      {/* ПРОСМОТР ЧУЖОГО ПРОФИЛЯ */}
+      <Route path="/profile/:userId" element={<ProfileView />} />
+
+      {/* ЗАЩИЩЕННЫЙ МАРШРУТ - СОБСТВЕННЫЙ ПРОФИЛЬ */}
       <Route
-        path="/profile"
+        path="/my-profile"
         element={
           <ProtectedRoute>
             <ProfilePage />
           </ProtectedRoute>
         }
       />
-<Route path="/profileview/:userId" element={<ProfileView />} />
 
-      {/* Новый маршрут для профиля другого пользователя по :userId */}
-      <Route path="/profile/:userId" element={<ProfilePage />} />
+      {/* РЕДИРЕКТ С /profile НА /my-profile */}
+      <Route path="/profile" element={<Navigate to="/my-profile" replace />} />
 
       {/* Все остальные пути редиректим на главную */}
       <Route path="*" element={<Navigate to="/" replace />} />

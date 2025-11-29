@@ -13,51 +13,48 @@ export default function SignInPage() {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email, password}),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка входа');
-      }
-      
-      // Детальная диагностика ответа
-      console.log('✅ Login response:', data);
-      
-      // Сохраняем ВСЕ данные пользователя
-      localStorage.setItem('currentUserId', data.user?.id || data.id);
-      localStorage.setItem('userEmail', data.user?.email || data.email);
-      localStorage.setItem('userFirstName', data.user?.firstName || data.firstName || '');
-      localStorage.setItem('userLastName', data.user?.lastName || data.lastName || '');
-      localStorage.setItem('userPhoto', data.user?.photo || data.photo || '');
-      localStorage.setItem('userDescription', data.user?.description || data.description || '');
-      
-      // Сохраняем полный объект пользователя
-      localStorage.setItem('userData', JSON.stringify(data.user || data));
-      
-      console.log('📝 Saved to localStorage:', {
-        userId: localStorage.getItem('currentUserId'),
-        email: localStorage.getItem('userEmail'),
-        firstName: localStorage.getItem('userFirstName')
-      });
-      
-      // ИСПРАВЛЕНИЕ: ПЕРЕХОДИМ НА СВОЙ ПРОФИЛЬ (БЕЗ ID)
-      console.log('🔄 Redirecting to own profile page: /profile');
-      navigate('/profile'); // Важно: без ID, чтобы открылся ProfilePage
-      
-    } catch (err) {
-      console.error('💥 Login error:', err);
-      setError(err.message);
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setError('');
+  try {
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password}),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Ошибка входа');
     }
-  };
+    
+    console.log('✅ Login response:', data);
+    
+    // Сохраняем ВСЕ данные пользователя
+    localStorage.setItem('currentUserId', data.user?.id || data.id);
+    localStorage.setItem('userEmail', data.user?.email || data.email);
+    localStorage.setItem('userFirstName', data.user?.firstName || data.firstName || '');
+    localStorage.setItem('userLastName', data.user?.lastName || data.lastName || '');
+    localStorage.setItem('userPhoto', data.user?.photo || data.photo || '');
+    localStorage.setItem('userDescription', data.user?.description || data.description || '');
+    localStorage.setItem('userData', JSON.stringify(data.user || data));
+    
+    console.log('📝 Saved to localStorage:', {
+      userId: localStorage.getItem('currentUserId'),
+      email: localStorage.getItem('userEmail'),
+      firstName: localStorage.getItem('userFirstName')
+    });
+    
+    // РЕДИРЕКТ НА НОВЫЙ ПУТЬ
+    console.log('🔄 Redirecting to own profile page: /my-profile');
+    navigate('/my-profile');
+    
+  } catch (err) {
+    console.error('💥 Login error:', err);
+    setError(err.message);
+  }
+};
 
   // Добавим кнопку для диагностики localStorage
   const debugLocalStorage = () => {
