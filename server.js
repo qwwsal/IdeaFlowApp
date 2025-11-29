@@ -786,6 +786,48 @@ app.get('/api/debug/connection', async (req, res) => {
       tableCounts: tableCounts
     });
     
+// Проверка всех таблиц и данных в БД
+app.get('/api/debug/tables', async (req, res) => {
+  try {
+    // Получить все таблицы в базе данных
+    const tablesResult = await query(`
+      SELECT table_name, table_type 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+
+    // Для каждой таблицы получить количество записей и примеры данных
+    const tablesInfo = [];
+    
+    for (let table of tablesResult.rows) {
+      const countResult = await query(`SELECT COUNT(*) as count FROM "${table.table_name}"`);
+      let sampleData = [];
+      
+      if (countResult.rows[0].count > 0) {
+        const sampleResult = await query(`SELECT * FROM "${table.table_name}" LIMIT 2`);
+        sampleData = sampleResult.rows;
+      }
+      
+      tablesInfo.push({
+        tableName: table.table_name,
+        tableType: table.table_type,
+        rowCount: countResult.rows[0].count,
+        sampleData: sampleData
+      });
+    }
+
+    res.json({
+      database: (await query('SELECT current_database() as name')).rows[0].name,
+      tables: tablesInfo
+    });
+
+  } catch (err) {
+    console.error('Error checking tables:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
   } catch (err) {
     console.error('Connection debug error:', err);
     res.status(500).json({ error: err.message });

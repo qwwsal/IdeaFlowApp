@@ -6,106 +6,54 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Функция для инициализации таблиц
+// Функция для инициализации таблиц - ИСПРАВЛЕННАЯ ВЕРСИЯ
 async function initializeDatabase() {
   try {
     console.log('Подключение к PostgreSQL...');
     console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
 
-    // Создаем таблицу Users
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS Users (
-        id SERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        firstName TEXT,
-        lastName TEXT,
-        photo TEXT,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('Таблица Users создана или уже существует');
+    // Проверяем подключение
+    await pool.query('SELECT NOW()');
+    console.log('✅ Подключение к PostgreSQL успешно');
 
-    // Создаем таблицу Cases
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS Cases (
-        id SERIAL PRIMARY KEY,
-        userId INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        theme TEXT,
-        description TEXT,
-        cover TEXT,
-        files TEXT,
-        status TEXT DEFAULT 'open',
-        executorId INTEGER,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(userId) REFERENCES Users(id) ON DELETE CASCADE
-      )
+    // ЗАКОММЕНТИРОВАНО: НЕ создаем таблицы, используем существующие
+    // Только проверяем какие таблицы есть в БД
+    const tablesResult = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
     `);
-    console.log('Таблица Cases создана или уже существует');
 
-    // Создаем таблицу ProcessedCases
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS ProcessedCases (
-        id SERIAL PRIMARY KEY,
-        caseId INTEGER NOT NULL,
-        userId INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        theme TEXT,
-        description TEXT,
-        cover TEXT,
-        files TEXT,
-        status TEXT DEFAULT 'in_process',
-        executorEmail TEXT,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(caseId) REFERENCES Cases(id) ON DELETE CASCADE,
-        FOREIGN KEY(userId) REFERENCES Users(id) ON DELETE CASCADE
-      )
-    `);
-    console.log('Таблица ProcessedCases создана или уже существует');
+    console.log('📊 Существующие таблицы в базе данных:');
+    tablesResult.rows.forEach(table => {
+      console.log(`   - ${table.table_name}`);
+    });
 
-    // Создаем таблицу Projects
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS Projects (
-        id SERIAL PRIMARY KEY,
-        caseId INTEGER NOT NULL,
-        userId INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        theme TEXT,
-        description TEXT,
-        cover TEXT,
-        files TEXT,
-        status TEXT DEFAULT 'closed',
-        executorEmail TEXT,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(userId) REFERENCES Users(id) ON DELETE CASCADE,
-        FOREIGN KEY(caseId) REFERENCES Cases(id) ON DELETE CASCADE
-      )
-    `);
-    console.log('Таблица Projects создана или уже существует');
+    // Проверяем количество записей в основных таблицах
+    try {
+      const usersCount = await pool.query('SELECT COUNT(*) as count FROM Users');
+      const casesCount = await pool.query('SELECT COUNT(*) as count FROM Cases');
+      
+      console.log(`👥 Пользователей в БД: ${usersCount.rows[0].count}`);
+      console.log(`📁 Кейсов в БД: ${casesCount.rows[0].count}`);
+      
+      if (casesCount.rows[0].count > 0) {
+        // Покажем несколько примеров кейсов
+        const sampleCases = await pool.query('SELECT id, title, status FROM Cases LIMIT 3');
+        console.log('📋 Примеры кейсов:');
+        sampleCases.rows.forEach(caseItem => {
+          console.log(`   - ID: ${caseItem.id}, Title: "${caseItem.title}", Status: ${caseItem.status}`);
+        });
+      }
+    } catch (err) {
+      console.log('⚠️  Не удалось проверить данные таблиц:', err.message);
+    }
 
-    // Создаем таблицу Reviews
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS Reviews (
-        id SERIAL PRIMARY KEY,
-        userId INTEGER NOT NULL,
-        reviewerId INTEGER NOT NULL,
-        reviewerName TEXT,
-        reviewerPhoto TEXT,
-        text TEXT NOT NULL,
-        rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(userId) REFERENCES Users(id) ON DELETE CASCADE,
-        FOREIGN KEY(reviewerId) REFERENCES Users(id) ON DELETE CASCADE
-      )
-    `);
-    console.log('Таблица Reviews создана или уже существует');
-
-    console.log('Все таблицы успешно инициализированы');
+    console.log('✅ Используем существующие таблицы с данными');
 
   } catch (err) {
-    console.error('Ошибка при инициализации базы данных:', err);
+    console.error('❌ Ошибка при инициализации базы данных:', err);
     throw err;
   }
 }
@@ -129,7 +77,9 @@ async function query(text, params) {
     const result = await pool.query(text, params);
     return result;
   } catch (err) {
-    console.error('Ошибка выполнения запроса:', err);
+    console.error('❌ Ошибка выполнения запроса:', err);
+    console.error('📝 Запрос:', text);
+    console.error('📝 Параметры:', params);
     throw err;
   }
 }
