@@ -9,7 +9,7 @@ export default function AddCasePage() {
   const [files, setFiles] = useState([]);
   const [cover, setCover] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+const userId = localStorage.getItem('currentUserId');
   const navigate = useNavigate();
   
   // Добавлено: API базовый URL

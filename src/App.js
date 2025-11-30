@@ -39,7 +39,7 @@ export default function App() {
       <Route path="/add-case" element={<AddCasePage />} />
 
       {/* ПРОСМОТР ЧУЖОГО ПРОФИЛЯ - ОТКРЫТЫЙ ДОСТУП */}
-      <Route path="/profile/:userId" element={<ProfileView />} />
+      <Route path="/profileview/:userId" element={<ProfileView />} />
 
       {/* СОБСТВЕННЫЙ ПРОФИЛЬ - ЗАЩИЩЕННЫЙ */}
       <Route
