@@ -148,20 +148,6 @@ const handleLogin = async (e) => {
             Нет аккаунта? Зарегистрироваться
           </span>
         </div>
-
-        {/* Кнопка для диагностики (можно удалить после исправления) */}
-        <button 
-          type="button" 
-          onClick={debugLocalStorage}
-          style={{
-            marginTop: '10px',
-            background: '#6c757d',
-            fontSize: '12px',
-            padding: '5px 10px'
-          }}
-        >
-          Debug localStorage
-        </button>
       </form>
 
       <footer className={styles.footer}>
