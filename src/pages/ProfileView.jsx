@@ -487,15 +487,15 @@ export default function ProfileView() {
               </div>
       
               <nav className={`${styles.navLinks} ${isMenuOpen ? styles.navLinksActive : ''}`}>
-                <Link to={userId ? "/profile" : "/signin"}>Профиль</Link>
-                <Link to="/cases">Кейсы</Link>
-                <Link to="/projects">Проекты</Link>
-                <Link to={userId ? "/profile" : "/signin"}>
-                  <button className={styles.buttonYellow}>Разместить проект</button>
-                </Link>
-                <Link to="/cases">
-                  <button className={styles.buttonYellow}>Приступить к проекту</button>
-                </Link>
+                <Link to={userId ? "/myprofile" : "/signin"}>Профиль</Link>
+          <Link to="/cases">Кейсы</Link>
+          <Link to="/projects">Проекты</Link>
+          <Link to={userId ? "/myprofile" : "/signin"}>
+            <button className={styles.buttonYellow}>Разместить проект</button>
+          </Link>
+          <Link to="/cases">
+            <button className={styles.buttonYellow}>Приступить к проекту</button>
+          </Link>
                 
                 {/* Элементы из футера в мобильном меню */}
                 <div className={styles.mobileFooterMenu}>
