@@ -8,7 +8,7 @@ export default function SignInPage() {
   const [error, setError] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
-
+const userId = localStorage.getItem('currentUserId');
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };

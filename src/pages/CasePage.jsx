@@ -11,6 +11,8 @@ export default function CasePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
   
+const userId = localStorage.getItem('currentUserId');
+
   // Добавлено: API базовый URL
   const API_BASE_URL = '/api';
 

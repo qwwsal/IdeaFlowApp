@@ -11,6 +11,8 @@ export default function PageFullProject() {
   const [error, setError] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
+const userId = localStorage.getItem('currentUserId');
+
   // Добавлено: API базовый URL
   const API_BASE_URL = '/api';
 

@@ -32,6 +32,8 @@ export default function ProfilePage() {
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
 
+
+  
   // Добавлено: API базовый URL
   const API_BASE_URL = '/api';
 
