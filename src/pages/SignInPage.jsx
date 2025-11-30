@@ -48,7 +48,7 @@ const handleLogin = async (e) => {
     
     // РЕДИРЕКТ НА НОВЫЙ ПУТЬ
     console.log('🔄 Redirecting to own profile page: /my-profile');
-    navigate('/my-profile');
+    navigate('/myprofile');
     
   } catch (err) {
     console.error('💥 Login error:', err);

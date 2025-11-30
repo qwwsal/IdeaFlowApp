@@ -17,27 +17,32 @@ const userId = localStorage.getItem('currentUserId');
     setIsMenuOpen(!isMenuOpen);
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setError('');
-    try {
-      // Исправлено: заменил URL на API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/register`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email, password}),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Ошибка регистрации');
-      
-      localStorage.setItem('currentUserId', data.id);
-      localStorage.setItem('userEmail', data.email);
-      
-      navigate('/profile');
-    } catch (err) {
-      setError(err.message);
+ const handleRegister = async (e) => {
+  e.preventDefault();
+  setError('');
+  try {
+    const response = await fetch(`${API_BASE_URL}/register`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password}),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('Server error details:', data);
+      throw new Error(data.error || `Ошибка сервера: ${response.status}`);
     }
-  };
+    
+    localStorage.setItem('currentUserId', data.id);
+    localStorage.setItem('userEmail', data.email);
+    
+    navigate('/myprofile'); // ИСПРАВЬТЕ: должно быть /myprofile вместо /profile
+  } catch (err) {
+    console.error('Registration error:', err);
+    setError(err.message || 'Ошибка соединения с сервером');
+  }
+};
 
   return (
     <>
